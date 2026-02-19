@@ -1,9 +1,13 @@
 package com.example.todo_api_v2.controller;
 
 import com.example.todo_api_v2.service.TodoService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 
 @RestController//窓口を示すアノテーション
@@ -18,5 +22,10 @@ public class TodoController {
     @PostMapping // POST/todosを受け付ける
     public String createTodo(String todo){
         return todoService.registerTodo(todo);
+    }
+
+    @GetMapping//Todoの中身を確認する
+    public ResponseEntity<List<String>> getTodos(){
+        return ResponseEntity.ok(todoService.findAll());
     }
 }
