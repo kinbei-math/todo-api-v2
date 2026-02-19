@@ -1,3 +1,26 @@
+## 開発環境
+- Java: 25
+- Spring Boot: 4.0.2
+- ビルドツール: Gradle
+- Intellij IDEA: 2025.03
+
+## ローカルでの起動コマンド
+**Mac / Linux の場合**
+```bash
+./gradlew bootRun
+```
+**Windows の場合**
+```bash
+gradlew.bat bootRun
+```
+
+## 動作確認用のエンドポイント一覧
+| HTTPメソッド | パス | 役割 |
+| :--- | :--- | :--- |
+| GET | `/health` | アプリケーションが正常に稼働しているか（ヘルスチェック）を確認する |
+| GET | `/todos` | 現在登録されているTodoの一覧（リスト）を取得する |
+
+
 ### 23. W4: Gradle基盤整備・Mockitoテスト・GitHub Actions CI構築
 
 - **日付**: 2026/02/18
