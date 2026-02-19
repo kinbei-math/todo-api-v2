@@ -42,5 +42,49 @@ gradlew.bat bootRun
   - Controller/Service/Repositoryの責務分割を言語化（変更の影響範囲を閉じ込める設計意図まで）
   - READMEに開発環境・起動手順（Mac/Windows両対応）・エンドポイント一覧を記載
 
+### 25. W5-D1: READMEにレイヤードアーキテクチャの図を追加する
+
+## アーキテクチャ構成とデータの流れ
+
+本アプリケーションは、メンテナンス性・拡張性を考慮し、レイヤードアーキテクチャで構成されています。
+現在はController / Serviceの2層構成で、W6以降でRepositoryを追加し3層構成に移行予定です。
+
+```mermaid
+graph LR
+    %% ノードの定義
+    Client[Client<br/>ブラウザ / curl]
+    Controller[Controller<br/>TodoController]
+    Service[Service<br/>TodoService]
+    Memory[(MemoryList<br/>todoList)]
+
+    %% リクエスト（行き）の流れ
+    Client -->|① HTTPリクエスト| Controller
+    Controller -->|② メソッド呼び出し| Service
+    Service -->|③ データの取得・保存| Memory
+
+    %% レスポンス（帰り）の流れ
+    Memory -.->|④ 操作結果| Service
+    Service -.->|⑤ 戻り値| Controller
+    Controller -.->|⑥ HTTPレスポンス| Client
+
+    %% スタイルの設定
+    style Memory fill:#f9f,stroke:#333,stroke-width:2px
+```
+
+### 各層の責務
+- **Controller**: 外部からの通信の窓口です。HTTPリクエスト（JSONなど）を受け取り、Javaオブジェクトに変換してServiceに処理を依頼します。最終的にレスポンスを返却します。
+- **Service**: 業務ロジック（ビジネスルール）を担当します。Controllerからの依頼を受け、データの加工や判断を行います。
+- **Repository（W6以降で導入予定）**: データベースへのデータの保存・取得を担当します。現在はService内のメモリ（List）を保管庫として代用しています。
+
+### 💡 補足：メソッドによる通信の違い（POST / GET）
+上記の図の **②（メソッド呼び出し）** と **⑤（戻り値）** において、リクエストの種類によって扱うデータが以下のように異なります。
+
+- **登録時（POST `/todos`）**
+  - **② 渡すもの**: JSONから取り出した登録用の文字列（`CreateTodoRequest` の `title`）
+  - **⑤ 返るもの**: 「〜を登録しました」というメッセージの文字列（`String`）
+- **一覧取得時（GET `/todos`）**
+  - **② 渡すもの**: なし（全件取得のメソッドを引数なしで呼び出すのみ）
+  - **⑤ 返るもの**: 現在登録されているすべてのTodoのリスト（`List<String>`）
+
 ---
 Last Updated: 2026/02/19
