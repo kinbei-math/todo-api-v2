@@ -85,7 +85,23 @@ graph LR
   - Controller/Service/Repositoryの責務分割を言語化（変更の影響範囲を閉じ込める設計意図まで）
   - READMEに開発環境・起動手順（Mac/Windows両対応）・エンドポイント一覧を記載
 
+### 25. W5-D1: READMEにレイヤードアーキテクチャの図を追加
+- **日付**: 2026/02/19
+- **ファイル**: [README.md](README.md)
+- **学習内容**:
+  - Mermaid記法でController → Service → Memoryの流れを図で表現
+  - 各層の責務（Controller/Service/Repository）を1文ずつ言語化
+  - RepositoryはW6以降導入予定である旨を明記
+  - POSTとGETでControllerからServiceへ渡すものが異なることを補足として記載
 
+### 26. W5-D2: POSTに@RequestBodyを導入
+- **日付**: 2026/02/19
+- **ファイル**: [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java)
+- **学習内容**:
+  - @RequestBodyなしではJSONボディが読み取れずnullになることを実験で確認
+  - クエリパラメータとリクエストボディの違いを理解
+  - CreateTodoRequestをrecordで定義し@RequestBodyで受け取る実装に修正
+  - ブランチを切ってから作業する運用を実践
 
 ---
 Last Updated: 2026/02/19
