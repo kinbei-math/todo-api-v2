@@ -23,6 +23,13 @@ public class Todo {
     }
 
     //3種類変数に対してのGetterとSetter+Idのgetter
+    public Long getId() {
+        return id;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
     public String getTitle() {
         return title;

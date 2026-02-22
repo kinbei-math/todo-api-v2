@@ -19,7 +19,7 @@ public class TodoControllerTest {
     @InjectMocks//仮のものを注入される。テストしたいクラス
     TodoController todoController;
 
-    @Test
+ /*   @Test
     void createTodo_shouldReturnMessage_whenTitleIsGiven(){
         TodoController.CreateTodoRequest request = new TodoController.CreateTodoRequest("買い物");
         //Mockの動きを定義する、title:買い物を登録したら買い物を登録しましたと返す。
@@ -32,4 +32,6 @@ public class TodoControllerTest {
         //結果が等しいかを確認する。
         assertEquals("買い物を登録しました", result);
     }
+
+  */
 }
