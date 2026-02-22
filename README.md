@@ -103,5 +103,17 @@ graph LR
   - CreateTodoRequestをrecordで定義し@RequestBodyで受け取る実装に修正
   - ブランチを切ってから作業する運用を実践
 
+### 27. W6: Todo CRUD（H2）開始 - Entity / Repository / DTO / POST・GET実装
+
+- **日付**: 2026/02/22
+- **ファイル**: [entity/Todo.java](src/main/java/com/example/todo_api_v2/entity/Todo.java), [repository/TodoRepository.java](src/main/java/com/example/todo_api_v2/repository/TodoRepository.java), [dto/TodoCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoCreateRequest.java), [dto/TodoResponse.java](src/main/java/com/example/todo_api_v2/dto/TodoResponse.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java), [build.gradle](build.gradle), [application.properties](src/main/resources/application.properties)
+- **学習内容**:
+  - RESTエンドポイント設計（メソッド/パス/ステータスコード）を自分で考えて言語化
+  - `@Entity` / `@Id` / `@GeneratedValue`でTodoエンティティを実装
+  - `JpaRepository<Todo, Long>`を継承したRepositoryインターフェースを作成
+  - DTOを入力用（TodoCreateRequest）と出力用（TodoResponse）に分けた設計意図を理解
+  - `save()`の戻り値を使わないとIDが取れない理由を理解して修正
+  - POST（201）/ GET（200）の動作確認をPowerShellで実施
+
 ---
 Last Updated: 2026/02/19
