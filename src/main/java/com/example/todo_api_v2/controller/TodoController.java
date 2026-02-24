@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 
 @RestController//窓口を示すアノテーション
@@ -26,5 +27,14 @@ public class TodoController {
     @GetMapping//Todoすべてのの中身を確認する
     public ResponseEntity<List<TodoResponse>> getTodos(){
         return ResponseEntity.status(HttpStatus.OK).body(todoService.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TodoResponse> getTodo(@PathVariable Long id) {
+        try {
+            return ResponseEntity.status(HttpStatus.OK).body(todoService.findById(id));
+        } catch(NoSuchElementException e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();//中身がないときはbulidで終わる。
+        }
     }
 }
