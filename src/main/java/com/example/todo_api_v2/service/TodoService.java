@@ -5,7 +5,12 @@ import com.example.todo_api_v2.dto.TodoResponse;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.repository.TodoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 public class TodoService {
@@ -43,5 +48,15 @@ public class TodoService {
         return todoRepository.findAll().stream()
                 .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
                 .toList();
+    }
+
+    //保管庫にあるデータをfindById(Repository標準メソッド)で取り出す。(Entity型が入っている。)
+    //orElseThrowでOptionalで取り出したデータが空の場合、NoSuchElementの例外を返す。
+    //中身がある場合はTodoResponseに変換して返す。
+    public TodoResponse findById(Long id){
+        return todoRepository.findById(id)
+                .map(todo->new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
+                .orElseThrow(()-> new NoSuchElementException("Todoが見つかりません。"));
+
     }
 }
