@@ -115,5 +115,15 @@ graph LR
   - `save()`の戻り値を使わないとIDが取れない理由を理解して修正
   - POST（201）/ GET（200）の動作確認をPowerShellで実施
 
+### 28. W6: findById実装 - 詳細取得エンドポイント追加
+
+- **日付**: 2026/02/24
+- **ファイル**: [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java)
+- **学習内容**:
+  - `JpaRepository.findById()`の戻り値が`Optional`であることを理解
+  - `orElseThrow()`で存在しないIDの場合に`NoSuchElementException`を投げる実装
+  - `@PathVariable`でURLの`{id}`を受け取る方法
+  - `try-catch`で`NoSuchElementException`を404に変換する実装
+  - `long`と`Long`の違い（プリミティブ型とラッパークラス）
 ---
-Last Updated: 2026/02/19
+Last Updated: 2026/02/24
