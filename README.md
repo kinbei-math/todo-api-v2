@@ -125,5 +125,18 @@ graph LR
   - `@PathVariable`でURLの`{id}`を受け取る方法
   - `try-catch`で`NoSuchElementException`を404に変換する実装
   - `long`と`Long`の違い（プリミティブ型とラッパークラス）
+
+### 29. W6: Todo CRUD完成 - 更新・削除・エラーレスポンス統一
+
+- **日付**: 2026/02/26
+- **ファイル**: [dto/TodoUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoUpdateRequest.java), [dto/ErrorResponse.java](src/main/java/com/example/todo_api_v2/dto/ErrorResponse.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java)
+- **学習内容**:
+  - 更新用DTO（TodoUpdateRequest）を入力用・出力用と分けて設計
+  - `updateTodo` / `deleteTodo`をServiceに実装（save()の戻り値を使う理由を理解）
+  - `@PutMapping` / `@DeleteMapping`でエンドポイントを追加
+  - `ResponseEntity<?>`で成功時と失敗時に異なる型を返す方法を理解
+  - ErrorResponseを作成し、404エラー時にメッセージを返す形式に統一
+  - PowerShellで全エンドポイントの動作確認（POST/GET/PUT/DELETE/404）
+
 ---
-Last Updated: 2026/02/24
+Last Updated: 2026/02/26
