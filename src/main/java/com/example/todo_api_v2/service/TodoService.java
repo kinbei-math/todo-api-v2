@@ -2,11 +2,11 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.TodoCreateRequest;
 import com.example.todo_api_v2.dto.TodoResponse;
+import com.example.todo_api_v2.dto.TodoUpdateRequest;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.repository.TodoRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -58,5 +58,26 @@ public class TodoService {
                 .map(todo->new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
                 .orElseThrow(()-> new NoSuchElementException("Todoが見つかりません。"));
 
+    }
+
+    //保管庫にあるデータを探して置き換える
+    //保管庫にないデータの場合は例外を投げる
+    public TodoResponse updateTodo(TodoUpdateRequest todoUpdateRequest,Long id){
+        Todo todo= todoRepository.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
+        todo.setTitle(todoUpdateRequest.title());
+        todo.setDueDate(todoUpdateRequest.dueDate());
+        todo.setCompleted(todoUpdateRequest.isCompleted());
+
+        Todo saveTodo = todoRepository.save(todo);
+
+        return new TodoResponse(saveTodo.getId(),saveTodo.getTitle(),saveTodo.getDueDate(),saveTodo.getCompleted());
+    }
+
+    //保管庫にあればデータを削除　返り値はなし
+    //保管庫にない場合は例外を投げる
+    public void deleteTodo(Long id){
+        todoRepository.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
+
+        todoRepository.deleteById(id);
     }
 }
