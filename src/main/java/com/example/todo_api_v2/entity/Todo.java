@@ -1,18 +1,7 @@
 package com.example.todo_api_v2.entity;
-
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-
-
 import java.time.LocalDate;
 
-@Entity
 public class Todo {
-    @GeneratedValue(strategy = GenerationType.IDENTITY)//idの自動採番　唯一性がある採番方法
-    @Id//Idが主要なキー(検索をかける)であることを明示
     private Long id;  //idのフィールド
     private String title;  //タイトルのフィールド
     private LocalDate dueDate;  //日付のフィールド
@@ -22,7 +11,11 @@ public class Todo {
     public Todo() {
     }
 
-    //3種類変数に対してのGetterとSetter+Idのgetter
+    //4種類変数に対してのGetterとSetter
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Long getId() {
         return id;
     }
