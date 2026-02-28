@@ -138,5 +138,19 @@ graph LR
   - ErrorResponseを作成し、404エラー時にメッセージを返す形式に統一
   - PowerShellで全エンドポイントの動作確認（POST/GET/PUT/DELETE/404）
 
+### 30. W7: MyBatis導入・JPA→MyBatis切替・CRUD動作確認
+
+- **日付**: 2026/02/28
+- **ファイル**: [build.gradle](build.gradle), [application.properties](src/main/resources/application.properties), [schema.sql](src/main/resources/schema.sql), [mapper/TodoMapper.java](src/main/java/com/example/todo_api_v2/mapper/TodoMapper.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [entity/Todo.java](src/main/java/com/example/todo_api_v2/entity/Todo.java)
+- **学習内容**:
+  - `spring-boot-starter-data-jpa` を削除し `mybatis-spring-boot-starter:4.0.0` に切替
+  - `schema.sql` でCREATE TABLE文を手書き（MyBatisはテーブル自動生成がないため）
+  - `@Mapper` / `@Select` / `@Insert` / `@Update` / `@Delete` でSQLをアノテーションで記述
+  - `@Options(useGeneratedKeys = true, keyProperty = "id")` でDB自動採番したidをJavaに反映
+  - `mybatis.configuration.map-underscore-to-camel-case=true` でスネークケース⇔キャメルケースを自動変換
+  - `Todo.java` からJPAアノテーション（`@Entity` / `@Id` / `@GeneratedValue`）を削除しPOJOに変更
+  - `setId()` を追加した理由：MyBatisがSELECT結果をJavaに詰める際にSetterを使うため
+  - CRUD全エンドポイントの動作確認（POST/GET/PUT/DELETE/404）完了
+
 ---
-Last Updated: 2026/02/26
+Last Updated: 2026/02/28
