@@ -79,4 +79,13 @@ public class TodoService {
         todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todoMapper.delete(id);
     }
+
+    //titleで部分一致するものを検索する
+    //検索したものがList<Todo>で返ってくるので、それをtodoResponseに詰めなおして、リストにして出力
+    public List<TodoResponse> findByKeyword(String keyword){
+        //Todo(Entity型)のリストをStreamに並べて、Todoたちをベルトコンベアに載せる。
+        return todoMapper.findByKeyword(keyword).stream()
+                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
+                .toList();
+    }
 }

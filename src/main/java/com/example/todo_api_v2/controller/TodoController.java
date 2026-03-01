@@ -26,11 +26,6 @@ public class TodoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(todoService.createTodo(todoCreateRequest));
     }
 
-    @GetMapping//Todoすべてのの中身を確認する
-    public ResponseEntity<List<TodoResponse>> getTodos(){
-        return ResponseEntity.status(HttpStatus.OK).body(todoService.findAll());
-    }
-
     @GetMapping("/{id}")//idに対してTodoを取り出す
     public ResponseEntity<?> getTodo(@PathVariable Long id) {
         try {
@@ -56,6 +51,16 @@ public class TodoController {
             return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }catch (NoSuchElementException e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(404,"Todoが見つかりません"));
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<List<TodoResponse>> getTodos(@RequestParam(required=false) String keyword){
+        //keywordがnull(入力なし)または""(空文字)の場合は全権取得
+        if(keyword==null || keyword.isEmpty()){
+            return ResponseEntity.status(HttpStatus.OK).body(todoService.findAll());
+        }else{
+            return  ResponseEntity.status(HttpStatus.OK).body(todoService.findByKeyword(keyword));
         }
     }
 }

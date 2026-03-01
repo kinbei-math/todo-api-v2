@@ -10,26 +10,30 @@ import java.util.Optional;
 //指示(SQL)に対して、どんな結果(java)を返すというのを先に決める
 @Mapper
 public interface TodoMapper {
-    //Java findAll()を使うと下のSQLを使用
+    //テーブルにあるtodoをすべて返す。
     @Select("SELECT * FROM todos")
     List<Todo> findAll();
 
     //IDは自動採番
     //#{title}でgetTitle()を自動で使用
-    //Java insert(Todo todo)を使うと下のSQLを使用
+    //todoを与えて新規追加
     @Insert("INSERT INTO todos(title,due_date,is_completed) VALUES (#{title},#{dueDate},#{isCompleted})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
+    @Options(useGeneratedKeys = true, keyProperty = "id")//DBで自動採番されたidを保管
     void insert(Todo todo);
 
-    //Java findById(Long id)を使うと下のSQLを使用
+    //idを参照してTodoを検索
     @Select("SELECT * FROM todos WHERE id=#{id}")
     Optional<Todo> findById(Long id);
 
-    //Java update(Todo todo)を使うと下のSQLを使用
+    //idを参照してtodo更新
     @Update("UPDATE todos SET title=#{title},due_date=#{dueDate},is_completed=#{isCompleted} WHERE id=#{id}")
     void update(Todo todo);
 
-    //Java delete(Long id)を使うと下のSQLを使用
+    //Id指定でのtodo削除
     @Delete("DELETE FROM todos WHERE id=#{id}")
     void delete(Long id);
+
+    //キーワードでのタイトル部分一致検索
+    @Select("SELECT * FROM todos WHERE title LIKE CONCAT('%',#{keyword},'%')")//'%#{keyword}%' = '% 'keyword' %'を防ぐ
+    List<Todo> findByKeyword(String keyword);
 }
