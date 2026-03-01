@@ -152,5 +152,14 @@ graph LR
   - `setId()` を追加した理由：MyBatisがSELECT結果をJavaに詰める際にSetterを使うため
   - CRUD全エンドポイントの動作確認（POST/GET/PUT/DELETE/404）完了
 
+### 31. W7: キーワード検索実装・W7 DoD完了
+
+- **日付**: 2026/03/01
+- **ファイル**: [mapper/TodoMapper.java](src/main/java/com/example/todo_api_v2/mapper/TodoMapper.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java)
+- **学習内容**:
+  - `CONCAT('%', #{keyword}, '%')` でLIKE部分一致検索を実装（`'%#{keyword}%'` はNG）
+  - `@RequestParam(required = false)` でキーワード省略時は全件取得に切り替える設計
+  - `GET /todos` と `GET /todos?keyword=xxx` を1つのエンドポイントに統合
+  - W7 DoD（MyBatis切替 / DDL / 検索 / README）完全完了
 ---
-Last Updated: 2026/02/28
+Last Updated: 2026/03/01
