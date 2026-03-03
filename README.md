@@ -161,5 +161,15 @@ graph LR
   - `@RequestParam(required = false)` でキーワード省略時は全件取得に切り替える設計
   - `GET /todos` と `GET /todos?keyword=xxx` を1つのエンドポイントに統合
   - W7 DoD（MyBatis切替 / DDL / 検索 / README）完全完了
+  - W7 Q1 JPAではなくMyBatisを選んだ理由
+  　JPAではテーブルやRepository(インターフェイス)、Entityなど、自動実装される部分が多い。
+  　SQLの操作をより細かくしたい場合の自由度が高いMyBatisを選択した。
+  - W7 Q2 CONCAT('%', #{keyword}, '%') という書き方にした理由
+  　 #{keyword}はプリペアドステートメントとして値をバインドするため、
+    '%#{keyword}%'と書くと'%'keyword'%'と解釈されSQL構文エラーになる。
+    CONCATで%と切り離してバインドすることで正しくLIKE検索ができる。
+  - W7 Q3 map-underscore-to-camel-case=true を設定した理由
+    Java言語では変数やフィールドはキャメルケース(区切りが大文字)で書かれているのに対して、SQLではカラム名はスネークケースが一般的。
+    この命名規則による不一致をなくすために、スネークケースをキャメルケースに変換するから。
 ---
 Last Updated: 2026/03/01
