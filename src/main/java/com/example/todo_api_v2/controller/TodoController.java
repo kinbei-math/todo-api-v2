@@ -7,6 +7,7 @@ import com.example.todo_api_v2.dto.TodoUpdateRequest;
 import com.example.todo_api_v2.service.TodoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +23,7 @@ public class TodoController {
     }
 
     @PostMapping // POST/todosを受け付ける
-    public ResponseEntity<TodoResponse> createTodo(@RequestBody TodoCreateRequest todoCreateRequest){
+    public ResponseEntity<TodoResponse> createTodo(@Validated @RequestBody TodoCreateRequest todoCreateRequest){
         return ResponseEntity.status(HttpStatus.CREATED).body(todoService.createTodo(todoCreateRequest));
     }
 
