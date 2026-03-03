@@ -171,5 +171,17 @@ graph LR
   - W7 Q3 map-underscore-to-camel-case=true を設定した理由
     Java言語では変数やフィールドはキャメルケース(区切りが大文字)で書かれているのに対して、SQLではカラム名はスネークケースが一般的。
     この命名規則による不一致をなくすために、スネークケースをキャメルケースに変換するから。
+
+### 32. W8: Bean Validation導入・バリデーション制約の追加
+
+- **日付**: 2026/03/03
+- **ファイル**: [build.gradle](build.gradle), [dto/TodoCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoCreateRequest.java), [dto/ErrorResponse.java](src/main/java/com/example/todo_api_v2/dto/ErrorResponse.java), [dto/ValidationError.java](src/main/java/com/example/todo_api_v2/dto/ValidationError.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java)
+- **学習内容**:
+  - `spring-boot-starter-validation` を依存に追加しBean Validationを導入
+  - `@NotBlank` / `@Size(max=255)` で `title` に空白禁止・文字数上限の制約を設定
+  - `@Validated` をControllerの引数に付与してバリデーションを有効化
+  - `ErrorResponse` にバリデーションエラー詳細を返す `List<ValidationError>` を追加（後方互換の補助コンストラクタ付き）
+  - Springデフォルトのエラーレスポンスでは原因が不明瞭である問題を確認 → 次回 `@ControllerAdvice` で統一予定
+
 ---
-Last Updated: 2026/03/01
+Last Updated: 2026/03/03
