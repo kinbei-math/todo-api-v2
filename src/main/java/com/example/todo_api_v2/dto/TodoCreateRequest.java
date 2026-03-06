@@ -5,5 +5,5 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-public record TodoCreateRequest(@NotBlank @Size(max=255) String title, LocalDate dueDate) {
+public record TodoCreateRequest(@NotBlank(message = "タイトルを入力してください") @Size(max=255) String title, LocalDate dueDate) {
 }

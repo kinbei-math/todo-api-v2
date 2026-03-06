@@ -5,5 +5,5 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-public record TodoUpdateRequest(@NotBlank @Size(max=255) String title, LocalDate dueDate, Boolean isCompleted) {
+public record TodoUpdateRequest(@NotBlank(message = "タイトルを入力してください")  @Size(max=255) String title, LocalDate dueDate, Boolean isCompleted) {
 }
