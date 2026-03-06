@@ -183,5 +183,16 @@ graph LR
   - `ErrorResponse` にバリデーションエラー詳細を返す `List<ValidationError>` を追加（後方互換の補助コンストラクタ付き）
   - Springデフォルトのエラーレスポンスでは原因が不明瞭である問題を確認 → 次回 `@ControllerAdvice` で統一予定
 
+### 33. W8: @ControllerAdvice導入・例外ハンドリング統一・統合テスト
+
+- **日付**: 2026/03/06
+- **ファイル**: [exception/GlobalExceptionHandler.java](src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java), [dto/ErrorResponse.java](src/main/java/com/example/todo_api_v2/dto/ErrorResponse.java), [dto/ValidationError.java](src/main/java/com/example/todo_api_v2/dto/ValidationError.java), [dto/TodoCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoCreateRequest.java), [dto/TodoUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoUpdateRequest.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java), [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java), [build.gradle](build.gradle)
+- **学習内容**:
+  - `@RestControllerAdvice` + `@ExceptionHandler` で `MethodArgumentNotValidException` と `NoSuchElementException` を一元管理
+  - Controllerから `try-catch` を除去し、`ResponseEntity<?>` → `ResponseEntity<TodoResponse>` に型を明確化
+  - `@NotBlank(message="...")` でバリデーションメッセージをカスタマイズ
+  - `ErrorResponse` の補助コンストラクタで errors を空リストに変更（クライアント側のnullチェック不要化）
+  - `@SpringBootTest` + `@AutoConfigureMockMvc` で統合テスト2本（404/400）を実装
+
 ---
-Last Updated: 2026/03/03
+Last Updated: 2026/03/06
