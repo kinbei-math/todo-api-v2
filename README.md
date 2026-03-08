@@ -238,7 +238,16 @@ graph LR
   - `ErrorResponse` の補助コンストラクタで errors を空リストに変更（クライアント側のnullチェック不要化）
   - `@SpringBootTest` + `@AutoConfigureMockMvc` で統合テスト2本（404/400）を実装
 
+### 34. W8: 異常系統合テスト追加・エラーレスポンス仕様をREADMEに記載・W8 DoD完了
 
+- **日付**: 2026/03/08
+- **ファイル**: [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java), [README.md](README.md)
+- **学習内容**:
+  - `@SpringBootTest` + `@AutoConfigureMockMvc` で異常系統合テスト6本を実装（GET/PUT/DELETE 404、POST 空文字/空白/256文字 400）
+  - `jsonPath` でネストしたJSON（`$.errors[0].field`）を個別に検証する手法を習得
+  - DELETEリクエストにリクエストボディは不要であることを理解
+  - READMEにエラーレスポンス仕様（項目説明テーブル + 400/404のJSON例）を追記
+  - W8 DoD（Bean Validation / @ControllerAdvice / 統合テスト2本以上 / README記載）全完了
 
 ---
-Last Updated: 2026/03/06
+Last Updated: 2026/03/08
