@@ -1,4 +1,5 @@
-CREATE TABLE todos(
+-- GitHub用の修正
+CREATE TABLE IF NOT EXISTS todos(
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
     due_date DATE,
