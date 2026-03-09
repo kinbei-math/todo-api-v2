@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Service
 public class TodoService {
@@ -37,7 +36,7 @@ public class TodoService {
         todoMapper.insert(todo);
 
         //出力用のrecordを返信
-        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted());
+        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus());
     }
 
     //保管庫にあるデータ(TodoというEntity)を取り出す。findAll
@@ -46,7 +45,7 @@ public class TodoService {
     public List<TodoResponse> findAll(){
         //Todo(Entity型)のリストをStreamに並べて、Todoたちをベルトコンベアに載せる。
         return todoMapper.findAll().stream()
-                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
+                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
                 .toList();
     }
 
@@ -55,7 +54,7 @@ public class TodoService {
     //中身がある場合はTodoResponseに変換して返す。
     public TodoResponse findById(Long id){
         return todoMapper.findById(id)
-                .map(todo->new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
+                .map(todo->new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
                 .orElseThrow(()-> new NoSuchElementException("Todoが見つかりません。"));
 
     }
@@ -70,7 +69,7 @@ public class TodoService {
 
         todoMapper.update(todo);
 
-        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted());
+        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus());
     }
 
     //保管庫にあればデータを削除　返り値はなし
@@ -85,7 +84,7 @@ public class TodoService {
     public List<TodoResponse> findByKeyword(String keyword){
         //Todo(Entity型)のリストをStreamに並べて、Todoたちをベルトコンベアに載せる。
         return todoMapper.findByKeyword(keyword).stream()
-                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getCompleted()))
+                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
                 .toList();
     }
 }
