@@ -249,5 +249,17 @@ graph LR
   - READMEにエラーレスポンス仕様（項目説明テーブル + 400/404のJSON例）を追記
   - W8 DoD（Bean Validation / @ControllerAdvice / 統合テスト2本以上 / README記載）全完了
 
+### 35. W9: 状態遷移の設計判断・TodoStatus enum・changeStatusメソッド初版
+
+- **日付**: 2026/03/09
+- **ファイル**: [entity/TodoStatus.java](src/main/java/com/example/todo_api_v2/entity/TodoStatus.java), [entity/Todo.java](src/main/java/com/example/todo_api_v2/entity/Todo.java), [exception/InvalidStatusTransitionException.java](src/main/java/com/example/todo_api_v2/exception/InvalidStatusTransitionException.java)
+- **学習内容**:
+  - `isCompleted`（Boolean）→ `TodoStatus`（enum: TODO/DOING/DONE）への拡張設計
+  - 状態遷移ルールを全9パターン洗い出し、許可/禁止を業務観点で判断（Done→Todoは禁止、2ステップでの戻りは許容）
+  - 遷移ロジックをEntityに持たせる設計判断（「自分の状態を知っているのは自分自身」）
+  - `setStatus`を廃止し`changeStatus`メソッド経由でのみ状態変更可能にする設計
+  - 独自例外`InvalidStatusTransitionException`（extends IllegalStateException）を作成
+  - レビュー指摘：遷移ルールをenumにデータとして持たせるリファクタ、completedAt操作の分離、getter戻り値のOptional再検討が次回の課題
+
 ---
-Last Updated: 2026/03/08
+Last Updated: 2026/03/09
