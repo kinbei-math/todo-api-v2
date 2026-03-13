@@ -50,38 +50,27 @@ public class Todo {
     }
 
     //状態変遷を判定して置き換えるメソッド（Week9設計判断通り）
+    //判定はTodoStatusに任せる
     public void changeStatus(TodoStatus nextStatus){
-        switch (this.todoStatus){
-            case TODO -> {
-                if (nextStatus == DOING) { //TODO→DOING
-                    this.todoStatus = nextStatus;
-                } else {
-                    throw new InvalidStatusTransitionException("許可されていない状態遷移です");
-                }
-            }
-            case DOING-> {
-                if(nextStatus == TODO){ //DOING→TODO
-                    this.todoStatus=nextStatus;
-                } else if (nextStatus == DONE) { //DOING→DONE
-                    this.todoStatus=nextStatus;
-                    this.completedAt=LocalDateTime.now();
-                }else{
-                    throw new InvalidStatusTransitionException("許可されていない状態遷移です");
-                }
-            }
-            case DONE->{
-                if(nextStatus==DOING){//DONE→DOING
-                    this.todoStatus=nextStatus;
-                    this.completedAt=null;
-                }else{
-                    throw new InvalidStatusTransitionException("許可されていない状態遷移です");
-                }
-            }
+        //ガード節を意識。このif文以降は問題ない遷移に問題がないコードのみ
+        if(!todoStatus.canTransitionTo(nextStatus)){
+            throw new InvalidStatusTransitionException("許可されていない状態遷移です");
         }
+
+        //次のステータスが完了なら完了日時を入力
+        if(nextStatus==DONE){
+            completedAt=LocalDateTime.now();
+        }
+        //現在のステータスが完了なら完了日時を削除
+        if(todoStatus==DONE){
+            completedAt=null;
+        }
+        todoStatus=nextStatus;//今のステータスに次のステータスを代入
     }
 
-    //完了日時を取得 nullの可能性があるのでOptionalで包む
-    public Optional<LocalDateTime> getCompletedAt(){
-        return Optional.ofNullable(this.completedAt);
+
+    //完了日時を取得 nullの可能性があるがDBにうまく登録できない場合もあるので、Serviceでnullをケアする。
+    public LocalDateTime getCompletedAt(){
+        return this.completedAt;
     }
 }

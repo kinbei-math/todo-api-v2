@@ -2,6 +2,7 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.TodoCreateRequest;
 import com.example.todo_api_v2.dto.TodoResponse;
+import com.example.todo_api_v2.dto.TodoStatusUpdateRequest;
 import com.example.todo_api_v2.dto.TodoUpdateRequest;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.mapper.TodoMapper;
@@ -30,13 +31,12 @@ public class TodoService {
         //Entityにデータを詰める
         todo.setTitle(todoCreateRequest.title());
         todo.setDueDate(todoCreateRequest.dueDate());
-        todo.setCompleted(false);
 
         //データを詰めた箱を保管庫へ保存
         todoMapper.insert(todo);
 
         //出力用のrecordを返信
-        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus());
+        return convertTodoResponse(todo);
     }
 
     //保管庫にあるデータ(TodoというEntity)を取り出す。findAll
@@ -45,7 +45,7 @@ public class TodoService {
     public List<TodoResponse> findAll(){
         //Todo(Entity型)のリストをStreamに並べて、Todoたちをベルトコンベアに載せる。
         return todoMapper.findAll().stream()
-                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
+                .map(this::convertTodoResponse)
                 .toList();
     }
 
@@ -54,7 +54,7 @@ public class TodoService {
     //中身がある場合はTodoResponseに変換して返す。
     public TodoResponse findById(Long id){
         return todoMapper.findById(id)
-                .map(todo->new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
+                .map(this::convertTodoResponse)
                 .orElseThrow(()-> new NoSuchElementException("Todoが見つかりません。"));
 
     }
@@ -65,11 +65,21 @@ public class TodoService {
         Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todo.setTitle(todoUpdateRequest.title());
         todo.setDueDate(todoUpdateRequest.dueDate());
-        todo.setCompleted(todoUpdateRequest.isCompleted());
 
         todoMapper.update(todo);
 
-        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus());
+        return convertTodoResponse(todo);
+    }
+
+    //保管庫にあるデータのstatusを変化させる
+    //保管庫にない場合は例外を投げる
+    public TodoResponse changeTodoStatus(TodoStatusUpdateRequest todoStatusUpdateRequest,Long id){
+        Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
+        todo.changeStatus(todoStatusUpdateRequest.nextStatus());
+
+        todoMapper.updateStatus(todo);
+
+        return convertTodoResponse(todo);
     }
 
     //保管庫にあればデータを削除　返り値はなし
@@ -84,7 +94,13 @@ public class TodoService {
     public List<TodoResponse> findByKeyword(String keyword){
         //Todo(Entity型)のリストをStreamに並べて、Todoたちをベルトコンベアに載せる。
         return todoMapper.findByKeyword(keyword).stream()
-                .map(todo -> new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus()))
+                .map(this::convertTodoResponse)
                 .toList();
+    }
+
+    //TodoResponseに詰めなおすメソッド
+    //毎回変数の中で詰めなおす作業を減らせる
+    private TodoResponse convertTodoResponse(Todo todo){
+        return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus(),todo.getCompletedAt());
     }
 }
