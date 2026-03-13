@@ -261,5 +261,20 @@ graph LR
   - 独自例外`InvalidStatusTransitionException`（extends IllegalStateException）を作成
   - レビュー指摘：遷移ルールをenumにデータとして持たせるリファクタ、completedAt操作の分離、getter戻り値のOptional再検討が次回の課題
 
+### 36. W9: 状態遷移の実装 - TodoStatus enum リファクタ・全レイヤー改修・PATCHエンドポイント追加
+
+- **日付**: 2026/03/13
+- **ファイル**: [entity/TodoStatus.java](src/main/java/com/example/todo_api_v2/entity/TodoStatus.java), [entity/Todo.java](src/main/java/com/example/todo_api_v2/entity/Todo.java), [exception/InvalidStatusTransitionException.java](src/main/java/com/example/todo_api_v2/exception/InvalidStatusTransitionException.java), [exception/GlobalExceptionHandler.java](src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java), [dto/TodoResponse.java](src/main/java/com/example/todo_api_v2/dto/TodoResponse.java), [dto/TodoUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoUpdateRequest.java), [dto/TodoStatusUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoStatusUpdateRequest.java), [mapper/TodoMapper.java](src/main/java/com/example/todo_api_v2/mapper/TodoMapper.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java), [schema.sql](src/main/resources/schema.sql)
+- **学習内容**:
+  - TodoStatus enumに`canTransitionTo`メソッドを実装し、遷移ルールをデータとして表現
+  - switch式の中で比較演算の結果（boolean）を直接返す書き方を習得
+  - `changeStatus`をガード節でリファクタし、遷移判定と副作用（completedAt操作）を分離
+  - getterの戻り値にOptionalを使わない判断（MyBatis/Jacksonとの相性を考慮）
+  - schema.sqlでis_completed→todo_status(VARCHAR)+completed_at(TIMESTAMP)に変更
+  - `PATCH /todos/{id}/status`エンドポイントを新設し、内容更新（PUT）と状態遷移（PATCH）を責務分離
+  - TodoResponseへの詰め替えを`convertTodoResponse`としてprivateメソッドに抽出
+  - InvalidStatusTransitionExceptionに409 Conflictを割り当て（業務ルール違反の表現）
+  - `@PatchExchange`（HTTPクライアント用）と`@Update`（MyBatis用）の混同を修正
+
 ---
-Last Updated: 2026/03/09
+Last Updated: 2026/03/13
