@@ -1,6 +1,6 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.ValidationError;
+import com.example.todo_api_v2.dto.TodoResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,6 +8,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,6 +20,9 @@ public class TodoControllerTest {
 
     @Autowired //Springが作ったMockを以下の変数に自動注入
     private MockMvc mockMvc;//ブラウザ、Postmanの代わりにHTTPリクエストを送るMock
+
+    @Autowired
+    private ObjectMapper objectMapper;//綺麗にデータを詰め替えることが出来るクラス
 
     //get(idが存在しない)のテスト
     @Test
@@ -129,5 +134,26 @@ public class TodoControllerTest {
                 .andExpect(jsonPath("$.errors[0].message").value("titleが長すぎます"));
     }
 
+    //patch doingへの遷移テスト　統合ver
+    @Test
+    @Transactional//テストの後にDBを空にする。
+    void testPatchTodo_Return200_WhenNextStatusDoing() throws Exception {
+        String createJson = """
+                {
+                "title":"test",
+                "dueDate":"2026-03-01"
+                }
+                """;
+        //上記のJsonをpostして、通信結果をreturnで受け取り、getResponseでサーバーからのresponse(返事)だけ取り出し、content(中身)だけをString型で取り出す。
+        String responseJson = mockMvc.perform(MockMvcRequestBuilders.post("/todos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
-}//テスト再実行用
+        TodoResponse createTodoResponse = objectMapper.readValue(responseJson,TodoResponse.class);
+    }
+
+}
