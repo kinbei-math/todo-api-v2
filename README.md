@@ -276,5 +276,13 @@ graph LR
   - InvalidStatusTransitionExceptionに409 Conflictを割り当て（業務ルール違反の表現）
   - `@PatchExchange`（HTTPクライアント用）と`@Update`（MyBatis用）の混同を修正
 
+### 37. W9: 状態遷移のEntity単体テスト4件・統合テスト着手
+
+- **日付**: 2026/03/14
+- **ファイル**: [entity/TodoTest.java](src/test/java/com/example/todo_api_v2/entity/TodoTest.java), [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java)
+- **学習内容**:
+  - Entity単体テスト4件作成（正常遷移・不正遷移・completedAt設定/クリア）
+  - @BeforeEachで共通インスタンスを準備するテスト設計
+  - 統合テストでPOSTレスポンスからidを取り出す手法（andReturn → getContentAsString → objectMapper.readValue）
 ---
-Last Updated: 2026/03/13
+Last Updated: 2026/03/18
