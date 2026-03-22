@@ -284,5 +284,18 @@ graph LR
   - Entity単体テスト4件作成（正常遷移・不正遷移・completedAt設定/クリア）
   - @BeforeEachで共通インスタンスを準備するテスト設計
   - 統合テストでPOSTレスポンスからidを取り出す手法（andReturn → getContentAsString → objectMapper.readValue）
+
+### 38. W9: 一括status変更API（@Transactional）・Entity単体テスト4件・統合テスト4件
+
+- **日付**: 2026/03/22
+- **ファイル**: [dto/TodoBulkStatusUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoBulkStatusUpdateRequest.java), [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [controller/TodoController.java](src/main/java/com/example/todo_api_v2/controller/TodoController.java), [entity/TodoTest.java](src/test/java/com/example/todo_api_v2/entity/TodoTest.java), [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java)
+- **学習内容**:
+  - Entity単体テスト4件（正常遷移・不正遷移・completedAt設定/クリア）
+  - 統合テスト4件（PATCH正常遷移200・不正遷移409・一括正常200・一括ロールバック409）
+  - `@Transactional(rollbackFor = Exception.class)`で非検査例外+検査例外の両方をロールバック対象に
+  - テスト側の`@Transactional`とService側の`@Transactional`の干渉問題を理解し、ロールバック検証テストではテスト側の`@Transactional`を外す対応
+  - `@AfterEach`+JdbcTemplateでテスト後のDB清掃・AUTO_INCREMENTリセット
+  - `createTodoForTest`をprivateメソッドに抽出してテストコードのDRYを実現
+
 ---
-Last Updated: 2026/03/18
+Last Updated: 2026/03/22
