@@ -2,6 +2,7 @@ package com.example.todo_api_v2.mapper;
 
 import com.example.todo_api_v2.entity.Todo;
 import org.apache.ibatis.annotations.*;
+import org.springframework.web.service.annotation.PatchExchange;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,7 +18,7 @@ public interface TodoMapper {
     //IDは自動採番
     //#{title}でgetTitle()を自動で使用
     //todoを与えて新規追加
-    @Insert("INSERT INTO todos(title,due_date,is_completed) VALUES (#{title},#{dueDate},#{isCompleted})")
+    @Insert("INSERT INTO todos(title,due_date,todo_status,completed_at) VALUES (#{title},#{dueDate},#{todoStatus},#{completedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")//DBで自動採番されたidを保管
     void insert(Todo todo);
 
@@ -26,8 +27,12 @@ public interface TodoMapper {
     Optional<Todo> findById(Long id);
 
     //idを参照してtodo更新
-    @Update("UPDATE todos SET title=#{title},due_date=#{dueDate},is_completed=#{isCompleted} WHERE id=#{id}")
+    @Update("UPDATE todos SET title=#{title},due_date=#{dueDate} WHERE id=#{id}")
     void update(Todo todo);
+
+    //Status遷移に対応して変更する
+    @Update("UPDATE todos SET todo_status=#{todoStatus}, completed_at=#{completedAt} WHERE id=#{id}")
+    void updateStatus(Todo todo);
 
     //Id指定でのtodo削除
     @Delete("DELETE FROM todos WHERE id=#{id}")

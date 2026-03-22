@@ -36,4 +36,11 @@ public class GlobalExceptionHandler {
         //Validationと比較して、エラーの種類が今は１つしかないのでシンプルに整理する。
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(404,"Todoが見つかりません。"));
     }
+
+    //InvalidStatusTransitionExceptionを処理するメソッド
+    //入力は正しいが、不正な状態遷移を表す
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatusTransitionException(InvalidStatusTransitionException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409,"許可されていない状態遷移です"));
+    }
 }

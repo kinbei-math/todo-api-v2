@@ -1,16 +1,19 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.ValidationError;
+import com.example.todo_api_v2.dto.TodoResponse;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest //ControllerからDBまでテスト用に準備する
 @AutoConfigureMockMvc //Mockを自動で作成
@@ -18,6 +21,22 @@ public class TodoControllerTest {
 
     @Autowired //Springが作ったMockを以下の変数に自動注入
     private MockMvc mockMvc;//ブラウザ、Postmanの代わりにHTTPリクエストを送るMock
+
+    @Autowired
+    private ObjectMapper objectMapper;//綺麗にデータを詰め替えることが出来るクラス
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;//テストクラスの中でSQLを直接実行できるツール
+
+    // どのテストが終わった後も呼ばれるメソッド
+    @AfterEach
+    void tearDown() {
+        // todosテーブルのデータを全件削除して、DBをまっさらな状態に戻す
+        jdbcTemplate.execute("DELETE FROM todos");
+
+        //DBがH2やMySQLで、IDの連番(AUTO_INCREMENT)も「1」にリセットしたい場合
+        jdbcTemplate.execute("ALTER TABLE todos ALTER COLUMN id RESTART WITH 1");
+    }
 
     //get(idが存在しない)のテスト
     @Test
@@ -129,5 +148,129 @@ public class TodoControllerTest {
                 .andExpect(jsonPath("$.errors[0].message").value("titleが長すぎます"));
     }
 
+    //patch doingへの正常遷移テスト　統合ver
+    @Test
+    @Transactional//テストの後にDBを空にする。
+    void testPatchTodo_Return200_WhenNextStatusDoing() throws Exception {
+        TodoResponse createTodoResponse = createTodoForTest("test","2026-04-01");
 
+        String patchJson="""
+                {
+                "nextStatus":"DOING"
+                }
+                """;
+
+        //patchのテストが通るかを確認
+        mockMvc.perform(MockMvcRequestBuilders.patch("/todos/"+createTodoResponse.id()+"/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(patchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.todoStatus").value("DOING"));
+    }
+
+    //patch todo→doneへの不正遷移テスト　統合Ver baseは上の正常遷移テストと同じ
+    @Test
+    @Transactional//テストの後にDBを空にする
+    void testPatchTodo_Return409_WhenNextStatusDone() throws Exception{
+        TodoResponse createTodoResponse = createTodoForTest("test","2026-04-01");
+
+        String patchJson="""
+                {
+                "nextStatus":"DONE"
+                }
+                """;
+
+        //patchのテストが通るかを確認
+        mockMvc.perform(MockMvcRequestBuilders.patch("/todos/"+createTodoResponse.id()+"/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.statusCode").value(409))
+                .andExpect(jsonPath("$.message").value("許可されていない状態遷移です"));
+    }
+
+    //patch 一括変更　正常遷移　統合テスト
+    @Test
+    @Transactional
+    void testPatchTodo_Return200_WhenBulkNextStatusDoing()throws Exception{
+        //post2件
+        TodoResponse createTodoResponse1 = createTodoForTest("test1","2026-04-01");
+        TodoResponse createTodoResponse2 = createTodoForTest("test2","2026-05-01");
+
+
+        String patchJson="""
+                {
+                "ids":[%d,%d],
+                "nextStatus":"DOING"
+                }
+                """.formatted(createTodoResponse1.id(),createTodoResponse2.id());
+
+        //patchのテストが通るかを確認
+        mockMvc.perform(MockMvcRequestBuilders.patch("/todos/bulk-status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].todoStatus").value("DOING"))
+                .andExpect(jsonPath("$[1].todoStatus").value("DOING"));
+    }
+
+    @Test
+    void testPatchTodo_Return409_AndRollback_WhenBulkNextStatusDone()throws Exception{
+        TodoResponse createTodoResponse1 = createTodoForTest("test1","2026-04-01");
+        TodoResponse createTodoResponse2 = createTodoForTest("test2","2026-05-01");
+
+        //test1だけDOINGの状態に遷移させる
+        String patchJson="""
+                {
+                "nextStatus":"DOING"
+                }
+                """;
+        mockMvc.perform(MockMvcRequestBuilders.patch("/todos/"+createTodoResponse1.id()+"/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.todoStatus").value("DOING"));
+
+
+        //両方DONEに遷移させる
+        String patchBulkJson= """
+                {
+                "ids":[%d,%d],
+                "nextStatus":"DONE"
+                }
+                """.formatted(createTodoResponse1.id(),createTodoResponse2.id());
+
+        //test1はDONEになれるがtest2はなれないので409が返されていることを確認する。
+        mockMvc.perform(MockMvcRequestBuilders.patch("/todos/bulk-status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(patchBulkJson))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/todos/"+createTodoResponse1.id()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.todoStatus").value("DOING"));
+    }
+
+
+
+    //指定されたtitleとdueDateを満たすようなjsonを作りpostするメソッド
+    //簡易テスト用のメソッド
+    private TodoResponse createTodoForTest(String title,String dueDate)throws Exception{
+        String createJson= """
+                {
+                "title":"%s",
+                "dueDate":"%s"
+                }
+                """.formatted(title,dueDate);
+        //上記のJsonをpostして、通信結果をreturnで受け取り、getResponseでサーバーからのresponse(返事)だけ取り出し、content(中身)だけをString型で取り出す。
+        String responseJson = mockMvc.perform(MockMvcRequestBuilders.post("/todos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createJson))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readValue(responseJson,TodoResponse.class);
+    }
 }
