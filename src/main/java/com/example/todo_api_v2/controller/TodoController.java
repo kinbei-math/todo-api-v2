@@ -1,9 +1,6 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.TodoCreateRequest;
-import com.example.todo_api_v2.dto.TodoResponse;
-import com.example.todo_api_v2.dto.TodoStatusUpdateRequest;
-import com.example.todo_api_v2.dto.TodoUpdateRequest;
+import com.example.todo_api_v2.dto.*;
 import com.example.todo_api_v2.service.TodoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,5 +61,11 @@ public class TodoController {
     //nullを許容していないので、@Validatedをつけている
     public ResponseEntity<TodoResponse> changeTodoStatus(@Validated @RequestBody TodoStatusUpdateRequest todoStatusUpdateRequest,@PathVariable Long id){
         return ResponseEntity.status(HttpStatus.OK).body(todoService.changeTodoStatus(todoStatusUpdateRequest,id));
+    }
+
+    @PatchMapping("/bulk-status")
+    //status(patch)の一括変更　
+    public ResponseEntity<List<TodoResponse>> bulkChangeTodoStatus(@Validated @RequestBody TodoBulkStatusUpdateRequest todoBulkStatusUpdateRequest){
+        return ResponseEntity.status(HttpStatus.OK).body(todoService.bulkChangeTodoStatus(todoBulkStatusUpdateRequest));
     }
 }

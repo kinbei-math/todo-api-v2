@@ -1,12 +1,10 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.TodoCreateRequest;
-import com.example.todo_api_v2.dto.TodoResponse;
-import com.example.todo_api_v2.dto.TodoStatusUpdateRequest;
-import com.example.todo_api_v2.dto.TodoUpdateRequest;
+import com.example.todo_api_v2.dto.*;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.mapper.TodoMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
@@ -80,6 +78,28 @@ public class TodoService {
         todoMapper.updateStatus(todo);
 
         return convertTodoResponse(todo);
+    }
+
+    //statusの一括変更メソッド
+    //検査例外(IOException　ファイル読み込みエラー)もロールバックする
+    @Transactional(rollbackFor = Exception.class)
+    public List<TodoResponse> bulkChangeTodoStatus(TodoBulkStatusUpdateRequest todoBulkStatusUpdateRequest){
+        return todoBulkStatusUpdateRequest.ids().stream()
+                .map(id ->{
+                    //idが実際に保管庫にあることを確認する
+                    Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
+
+                    //このtodoに対して状態遷移が適切であるかを確認する
+                    todo.changeStatus(todoBulkStatusUpdateRequest.nextStatus());
+
+                    //Mapperクラスで保管庫の中を置き換える
+                    todoMapper.updateStatus(todo);
+
+                    //TodoReseponseクラスにうつしかえ
+                    return convertTodoResponse(todo);
+                })
+                //TodoReponseをリスト化
+                .toList();
     }
 
     //保管庫にあればデータを削除　返り値はなし
