@@ -297,5 +297,15 @@ graph LR
   - `@AfterEach`+JdbcTemplateでテスト後のDB清掃・AUTO_INCREMENTリセット
   - `createTodoForTest`をprivateメソッドに抽出してテストコードのDRYを実現
 
+### 39. W10: Role enum・Userエンティティ・usersテーブル設計
+
+- **日付**: 2026/03/22
+- **ファイル**: [entity/Role.java](src/main/java/com/example/todo_api_v2/entity/Role.java), [entity/User.java](src/main/java/com/example/todo_api_v2/entity/User.java), [schema.sql](src/main/resources/schema.sql)
+- **学習内容**:
+  - 認証（Authentication）と認可（Authorization）の違いを整理
+  - `Role` enum（USER / ADMIN）を作成し、TodoStatusと同じ設計パターンを再利用
+  - `User` エンティティ（id, email, role, passwordHash）を作成
+  - `schema.sql` に `users` テーブルを追加（email UNIQUE制約・password_hash NOT NULL）
+  - パスワード文字数制限はDB側ではなくJavaバリデーション層で行う判断（BCryptは固定60文字のため）
 ---
 Last Updated: 2026/03/22
