@@ -307,5 +307,16 @@ graph LR
   - `User` エンティティ（id, email, role, passwordHash）を作成
   - `schema.sql` に `users` テーブルを追加（email UNIQUE制約・password_hash NOT NULL）
   - パスワード文字数制限はDB側ではなくJavaバリデーション層で行う判断（BCryptは固定60文字のため）
+
+### 40. W10: UserMapper作成・Spring Security依存追加・デフォルト認証の体験
+
+- **日付**: 2026/03/23
+- **ファイル**: [mapper/UserMapper.java](src/main/java/com/example/todo_api_v2/mapper/UserMapper.java), [build.gradle](build.gradle)
+- **学習内容**:
+  - `UserMapper`を作成（`@Mapper` + `@Select`でemailからUser検索、戻り値は`Optional<User>`）
+  - `spring-boot-starter-security`をbuild.gradleに追加
+  - 依存追加だけで全エンドポイントにログイン必須のロックがかかることを体験（デフォルトで安全の設計思想）
+  - schema.sqlの全角スペース混入によるSQL構文エラーを発見・修正
+
 ---
-Last Updated: 2026/03/22
+Last Updated: 2026/03/23
