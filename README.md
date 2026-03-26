@@ -318,5 +318,16 @@ graph LR
   - 依存追加だけで全エンドポイントにログイン必須のロックがかかることを体験（デフォルトで安全の設計思想）
   - schema.sqlの全角スペース混入によるSQL構文エラーを発見・修正
 
+### 41. W10: SecurityConfig・CustomUserDetailsService・初期ユーザー登録・ロール別アクセス制御の動作確認
+
+- **日付**: 2026/03/26
+- **ファイル**: [config/SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java), [service/CustomUserDetailsService.java](src/main/java/com/example/todo_api_v2/service/CustomUserDetailsService.java), [data.sql](src/main/resources/data.sql)
+- **学習内容**:
+  - `SecurityConfig`でロール別アクセス制御を定義（DELETE=ADMINのみ、他=認証済み全員）
+  - `CustomUserDetailsService`でUserDetailsServiceをimplements、DBからemailでユーザー検索→UserDetailsに詰め替え
+  - `data.sql`に初期ユーザー2件（USER/ADMIN）をBCryptハッシュ付きで登録
+  - curlで全パターン動作確認：未認証→401、USERでGET→200、USERでDELETE→403、ADMINでDELETE→404（認可通過）
+  - `hasRole("ADMIN")`は内部的に`ROLE_ADMIN`を探す仕組みと、`.roles()`が自動で`ROLE_`を付ける整合性を理解
+
 ---
-Last Updated: 2026/03/23
+Last Updated: 2026/03/26
