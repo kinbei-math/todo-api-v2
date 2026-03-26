@@ -12,8 +12,9 @@ import java.util.NoSuchElementException;
 
 @Service
 public class TodoService {
-    private final TodoMapper todoMapper;
 
+    //TodoMapperをDIする
+    private final TodoMapper todoMapper;
     //TodoMapperを受け取るコンストラクタ
     public TodoService(TodoMapper todoMapper){
         this.todoMapper=todoMapper;

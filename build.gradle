@@ -35,6 +35,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'//Validation
 
 	implementation 'org.springframework.boot:spring-boot-starter-security'//Spring Security
+
+	compileOnly 'org.projectlombok:lombok'//lombok
+	annotationProcessor 'org.projectlombok:lombok'//lombok
 }
 
 tasks.named('test') {
