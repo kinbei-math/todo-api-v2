@@ -355,5 +355,15 @@ graph LR
   - curlで全パターン動作確認：未認証→401、USERでGET→200、USERでDELETE→403、ADMINでDELETE→404（認可通過）
   - `hasRole("ADMIN")`は内部的に`ROLE_ADMIN`を探す仕組みと、`.roles()`が自動で`ROLE_`を付ける整合性を理解
 
+### 42. W10: セキュリティテスト追加・MockMvcとSpring Security統合修正・README認可設計方針記載・W10 DoD完了
+
+- **日付**: 2026/03/30
+- **ファイル**: [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java), [README.md](README.md)
+- **学習内容**:
+  - `MockMvcBuilders.webAppContextSetup(context).apply(springSecurity())` でMockMvcとSpring Securityのフィルターチェーンを明示的に統合
+  - `@WithMockUser(roles = "USER")` でUSERロールのDELETEが403 Forbiddenになるテストを追加
+  - `@WithMockUser` なしで未認証GETが401 Unauthorizedになるテストを追加
+  - READMEに認可設計方針（未認証禁止の理由・DELETE制限の理由・今後の展望）とアクセスマトリックス表を記載
+  - W10 DoD（2ロール導入・保護エンドポイント制限・README認可図・セキュリティテスト）全完了
 ---
-Last Updated: 2026/03/26
+Last Updated: 2026/03/30
