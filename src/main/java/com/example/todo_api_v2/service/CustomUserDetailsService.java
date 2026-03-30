@@ -19,12 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email){
         User user = userMapper.findByEmail(email).orElseThrow(()->new UsernameNotFoundException("Userが見つかりません"));
-
-        // ★ 犯人探しのための罠（ログ出力）を仕掛けます！
-        System.out.println("★★★ 取得したEmail: " + user.getEmail());
-        System.out.println("★★★ 取得したパスワード: " + user.getPasswordHash());
-        System.out.println("★★★ 取得したロール: " + user.getRole());
-
         return convertUserDetails(user);
     }
 
