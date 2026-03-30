@@ -33,6 +33,12 @@ dependencies {
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.0'//MyBatis
 
 	implementation 'org.springframework.boot:spring-boot-starter-validation'//Validation
+
+	implementation 'org.springframework.boot:spring-boot-starter-security'//Spring Security
+	testImplementation 'org.springframework.security:spring-security-test'//Spring Security Test
+
+	compileOnly 'org.projectlombok:lombok'//lombok
+	annotationProcessor 'org.projectlombok:lombok'//lombok
 }
 
 tasks.named('test') {

@@ -2,25 +2,44 @@ package com.example.todo_api_v2.controller;
 
 import com.example.todo_api_v2.dto.TodoResponse;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import javax.swing.tree.ExpandVetoException;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest //ControllerからDBまでテスト用に準備する
-@AutoConfigureMockMvc //Mockを自動で作成
 public class TodoControllerTest {
+    // ① MockMvcを自動注入するのではなく、アプリ全体の箱（Context）を注入します
+    @Autowired
+    private WebApplicationContext context;
 
-    @Autowired //Springが作ったMockを以下の変数に自動注入
-    private MockMvc mockMvc;//ブラウザ、Postmanの代わりにHTTPリクエストを送るMock
+    // ② mockMvc は @Autowired を外して、ただの変数にします
+    private MockMvc mockMvc;
+
+    // ③ すべてのテストが始まる前に、MockMvcとSecurityを「統合」して組み立てます！
+    @BeforeEach
+    void setup() {
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(context)
+                .apply(springSecurity()) // 🌟これが超重要！SecurityとMockMvcを繋ぐ接着剤です！
+                .build();
+    }
 
     @Autowired
     private ObjectMapper objectMapper;//綺麗にデータを詰め替えることが出来るクラス
@@ -40,6 +59,7 @@ public class TodoControllerTest {
 
     //get(idが存在しない)のテスト
     @Test
+    @WithMockUser(roles = "USER")
     void testGetTodo_NotFound_WhenIdDoesNotExist() throws Exception {
 
         //mockに対して今から指示するリクエストを実行(perform)させる。 mockMvc.prtform(～～)
@@ -55,6 +75,7 @@ public class TodoControllerTest {
 
     //put(idが存在しない)のテスト
     @Test
+    @WithMockUser(roles = "USER")
     void testPutTodo_NotFound_WhenIdDoesNotExist() throws Exception{
 
         String json = """
@@ -75,6 +96,7 @@ public class TodoControllerTest {
 
     //delete(idが存在しない)のテスト
     @Test
+    @WithMockUser(roles = "ADMIN")
     void testDeleteTodo_NotFound_WhenIdDoesNotExist() throws Exception{
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/todos/999"))
@@ -86,6 +108,7 @@ public class TodoControllerTest {
 
     //post(titleが未入力)のテスト
     @Test
+    @WithMockUser(roles = "USER")
     void testCreateTodo_BadRequest_WhenTitleIsEmpty() throws Exception {
 
         //Jsonを先にテキストブロックで指定しておく
@@ -107,6 +130,7 @@ public class TodoControllerTest {
 
     //post(空白のみtitle)のテスト
     @Test
+    @WithMockUser(roles = "USER")
     void testPostTodo_BadRequest_WhenTitleIsBlank() throws Exception{
         //Jsonを先にテキストブロックで指定しておく
         String json = """
@@ -127,6 +151,7 @@ public class TodoControllerTest {
 
     //post(256文字以上)のテスト
     @Test
+    @WithMockUser(roles = "USER")
     void testPostTodo_BadRequest_WhenTitleIsTooLong() throws Exception{
         //256文字の文字列を先に生成
         String overSizeTitle = "a".repeat(256);
@@ -150,6 +175,7 @@ public class TodoControllerTest {
 
     //patch doingへの正常遷移テスト　統合ver
     @Test
+    @WithMockUser(roles = "USER")
     @Transactional//テストの後にDBを空にする。
     void testPatchTodo_Return200_WhenNextStatusDoing() throws Exception {
         TodoResponse createTodoResponse = createTodoForTest("test","2026-04-01");
@@ -170,6 +196,7 @@ public class TodoControllerTest {
 
     //patch todo→doneへの不正遷移テスト　統合Ver baseは上の正常遷移テストと同じ
     @Test
+    @WithMockUser(roles = "USER")
     @Transactional//テストの後にDBを空にする
     void testPatchTodo_Return409_WhenNextStatusDone() throws Exception{
         TodoResponse createTodoResponse = createTodoForTest("test","2026-04-01");
@@ -191,6 +218,7 @@ public class TodoControllerTest {
 
     //patch 一括変更　正常遷移　統合テスト
     @Test
+    @WithMockUser(roles = "USER")
     @Transactional
     void testPatchTodo_Return200_WhenBulkNextStatusDoing()throws Exception{
         //post2件
@@ -215,6 +243,7 @@ public class TodoControllerTest {
     }
 
     @Test
+    @WithMockUser(roles = "USER")
     void testPatchTodo_Return409_AndRollback_WhenBulkNextStatusDone()throws Exception{
         TodoResponse createTodoResponse1 = createTodoForTest("test1","2026-04-01");
         TodoResponse createTodoResponse2 = createTodoForTest("test2","2026-05-01");
@@ -251,10 +280,25 @@ public class TodoControllerTest {
                 .andExpect(jsonPath("$.todoStatus").value("DOING"));
     }
 
+    //USER権限にDELETEをさせて403エラー(Forbiddenエラー)が出ることを確認
+    @Test
+    @WithMockUser(roles = "USER")
+    void testDeleteTodo_Forbidden_WhenRoleIsUser()throws Exception{
+        mockMvc.perform(MockMvcRequestBuilders.delete("/todos/1"))
+                .andExpect(status().isForbidden());
+    }
+
+    //未認証でGETを求めると401エラー(Unauthorized)が出ることを確認
+    @Test
+    void testGet_Unauthorized_WhenNotAuthenticated()throws Exception{
+        mockMvc.perform(MockMvcRequestBuilders.get("/todos/1"))
+                .andExpect(status().isUnauthorized());
+    }
 
 
     //指定されたtitleとdueDateを満たすようなjsonを作りpostするメソッド
     //簡易テスト用のメソッド
+    @WithMockUser(roles = "USER")
     private TodoResponse createTodoForTest(String title,String dueDate)throws Exception{
         String createJson= """
                 {
