@@ -365,5 +365,14 @@ graph LR
   - `@WithMockUser` なしで未認証GETが401 Unauthorizedになるテストを追加
   - READMEに認可設計方針（未認証禁止の理由・DELETE制限の理由・今後の展望）とアクセスマトリックス表を記載
   - W10 DoD（2ロール導入・保護エンドポイント制限・README認可図・セキュリティテスト）全完了
+
+### 43. W11: TodoServiceユニットテスト3件追加（findById・createTodo）
+
+- **日付**: 2026/03/31
+- **ファイル**: [service/TodoServiceTest.java](src/test/java/com/example/todo_api_v2/service/TodoServiceTest.java)
+- **学習内容**:
+  - `@ExtendWith(MockitoExtension.class)` + `@Mock` / `@InjectMocks` でServiceレイヤーのユニットテストを構築
+  - 統合テスト（MockMvcで全レイヤー通過）とユニットテスト（1クラスだけ切り出し）の違いを理解
+  - `verify(todoMapper, times(1)).insert(any(Todo.class))` でMapperの呼び出し自体を検証する手法を習得
 ---
-Last Updated: 2026/03/30
+Last Updated: 2026/03/31
