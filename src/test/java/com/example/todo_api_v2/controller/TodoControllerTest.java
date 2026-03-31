@@ -19,25 +19,23 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import javax.swing.tree.ExpandVetoException;
-
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest //ControllerからDBまでテスト用に準備する
 public class TodoControllerTest {
-    // ① MockMvcを自動注入するのではなく、アプリ全体の箱（Context）を注入します
+    //mockは注入せずアプリ全体の箱(context)を注入
     @Autowired
     private WebApplicationContext context;
 
-    // ② mockMvc は @Autowired を外して、ただの変数にします
+    //mockの設定は下でやる。自動注入×
     private MockMvc mockMvc;
 
-    // ③ すべてのテストが始まる前に、MockMvcとSecurityを「統合」して組み立てます！
+    //すべてのテストの前にmockを作成
     @BeforeEach
     void setup() {
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
-                .apply(springSecurity()) // 🌟これが超重要！SecurityとMockMvcを繋ぐ接着剤です！
+                .apply(springSecurity()) //SecurityChainを注入
                 .build();
     }
 
