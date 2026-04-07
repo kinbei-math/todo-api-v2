@@ -171,6 +171,58 @@ public class TodoControllerTest {
                 .andExpect(jsonPath("$.errors[0].message").value("titleが長すぎます"));
     }
 
+    //findAllの正常系
+    @Test
+    @WithMockUser(roles="USER")
+    void testFindAll_shouldReturnTodoList_whenCalled() throws Exception{
+        //test用にDBに2件登録
+        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
+        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
+
+        //get/todosの場合、全件取得でListで返す。
+        mockMvc.perform(MockMvcRequestBuilders.get("/todos"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("test1"))
+                .andExpect(jsonPath("$[1].title").value("test2"))
+                .andExpect(jsonPath("$[0].dueDate").value("2027-04-01"))
+                .andExpect(jsonPath("$[1].dueDate").value("2027-04-02"));
+    }
+
+
+    //findByKeywordのKeyWord有り無し1本ずつ
+    @Test
+    @WithMockUser(roles="USER")
+    void testFindByKeyword_shouldReturn200AndTodoResponse_whenKeywordExists() throws Exception{
+        //test用にDBに4件登録
+        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
+        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
+        TodoResponse test3 = createTodoForTest("test1-1","2027-05-01");
+        TodoResponse test4 = createTodoForTest("test2-2","2027-05-02");
+
+        //get/todos?keywordで検索してListを返す。
+        mockMvc.perform(MockMvcRequestBuilders.get("/todos?keyword=test1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("test1"))
+                .andExpect(jsonPath("$[1].title").value("test1-1"))
+                .andExpect(jsonPath("$[0].dueDate").value("2027-04-01"))
+                .andExpect(jsonPath("$[1].dueDate").value("2027-05-01"));
+    }
+
+    @Test
+    @WithMockUser(roles="USER")
+    void testFindByKeyword_shouldReturn200AndEmptyList_whenKeywordNotExists() throws Exception{
+        //test用にDBに2件登録
+        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
+        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
+
+        //get/todos?keywordでEmptyListが返ること確かめる
+        mockMvc.perform(MockMvcRequestBuilders.get("/todos?keyword=todo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     //patch doingへの正常遷移テスト　統合ver
     @Test
     @WithMockUser(roles = "USER")
