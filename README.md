@@ -384,5 +384,13 @@ graph LR
   - `changeTodoStatus`の正常系（TODO→DOING）と異常系2本（ID不在・不正遷移TODO→DONEでInvalidStatusTransitionException）
   - `deleteTodo`の正常系（`verify`でdelete呼び出し確認）と異常系（ID不在でNoSuchElementException）
 
+### 45. W11: API統合テスト3件追加・テストピラミッド整理・W11 DoD大部分完了
+
+- **日付**: 2026/04/07
+- **ファイル**: [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java)
+- **学習内容**:
+  - `findAll`正常系（2件登録→全件取得でlength・title・dueDateを検証）
+  - `findByKeyword`ヒットあり（LIKE部分一致で2件抽出）・ヒットなし（空配列が返ること）の統合テスト
+  - テストピラミッドの3層（ユニット・統合・E2E）の違いと、現状の課題（アイスクリームコーン型）をNotionとJavaまとめに整理
 ---
-Last Updated: 2026/04/01
+Last Updated: 2026/04/07
