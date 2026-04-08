@@ -392,5 +392,14 @@ graph LR
   - `findAll`正常系（2件登録→全件取得でlength・title・dueDateを検証）
   - `findByKeyword`ヒットあり（LIKE部分一致で2件抽出）・ヒットなし（空配列が返ること）の統合テスト
   - テストピラミッドの3層（ユニット・統合・E2E）の違いと、現状の課題（アイスクリームコーン型）をNotionとJavaまとめに整理
+
+### 46. W11: JaCoCo導入・カバレッジ82%達成・W11 DoD全完了
+
+- **日付**: 2026/04/08
+- **ファイル**: [build.gradle](build.gradle)
+- **学習内容**:
+  - `build.gradle`に`id 'jacoco'`プラグインを追加
+  - `./gradlew test jacocoTestReport`でカバレッジレポートを生成
+  - 全体カバレッジ82%達成（Service 81%、Controller 75%、Entity 68%、DTO/Exception/Config 100%）
 ---
-Last Updated: 2026/04/07
+Last Updated: 2026/04/08
