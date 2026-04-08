@@ -365,5 +365,41 @@ graph LR
   - `@WithMockUser` なしで未認証GETが401 Unauthorizedになるテストを追加
   - READMEに認可設計方針（未認証禁止の理由・DELETE制限の理由・今後の展望）とアクセスマトリックス表を記載
   - W10 DoD（2ロール導入・保護エンドポイント制限・README認可図・セキュリティテスト）全完了
+
+### 43. W11: TodoServiceユニットテスト3件追加（findById・createTodo）
+
+- **日付**: 2026/03/31
+- **ファイル**: [service/TodoServiceTest.java](src/test/java/com/example/todo_api_v2/service/TodoServiceTest.java)
+- **学習内容**:
+  - `@ExtendWith(MockitoExtension.class)` + `@Mock` / `@InjectMocks` でServiceレイヤーのユニットテストを構築
+  - 統合テスト（MockMvcで全レイヤー通過）とユニットテスト（1クラスだけ切り出し）の違いを理解
+  - `verify(todoMapper, times(1)).insert(any(Todo.class))` でMapperの呼び出し自体を検証する手法を習得
+
+### 44. W11: TodoServiceユニットテスト7件追加（updateTodo・changeTodoStatus・deleteTodo）
+
+- **日付**: 2026/04/01
+- **ファイル**: [service/TodoServiceTest.java](src/test/java/com/example/todo_api_v2/service/TodoServiceTest.java)
+- **学習内容**:
+  - `updateTodo`の正常系（更新後のTodoResponse検証 + `verify`でupdate呼び出し確認）と異常系（ID不在でNoSuchElementException）
+  - `changeTodoStatus`の正常系（TODO→DOING）と異常系2本（ID不在・不正遷移TODO→DONEでInvalidStatusTransitionException）
+  - `deleteTodo`の正常系（`verify`でdelete呼び出し確認）と異常系（ID不在でNoSuchElementException）
+
+### 45. W11: API統合テスト3件追加・テストピラミッド整理・W11 DoD大部分完了
+
+- **日付**: 2026/04/07
+- **ファイル**: [controller/TodoControllerTest.java](src/test/java/com/example/todo_api_v2/controller/TodoControllerTest.java)
+- **学習内容**:
+  - `findAll`正常系（2件登録→全件取得でlength・title・dueDateを検証）
+  - `findByKeyword`ヒットあり（LIKE部分一致で2件抽出）・ヒットなし（空配列が返ること）の統合テスト
+  - テストピラミッドの3層（ユニット・統合・E2E）の違いと、現状の課題（アイスクリームコーン型）をNotionとJavaまとめに整理
+
+### 46. W11: JaCoCo導入・カバレッジ82%達成・W11 DoD全完了
+
+- **日付**: 2026/04/08
+- **ファイル**: [build.gradle](build.gradle)
+- **学習内容**:
+  - `build.gradle`に`id 'jacoco'`プラグインを追加
+  - `./gradlew test jacocoTestReport`でカバレッジレポートを生成
+  - 全体カバレッジ82%達成（Service 81%、Controller 75%、Entity 68%、DTO/Exception/Config 100%）
 ---
-Last Updated: 2026/03/30
+Last Updated: 2026/04/08
