@@ -401,5 +401,17 @@ graph LR
   - `build.gradle`に`id 'jacoco'`プラグインを追加
   - `./gradlew test jacocoTestReport`でカバレッジレポートを生成
   - 全体カバレッジ82%達成（Service 81%、Controller 75%、Entity 68%、DTO/Exception/Config 100%）
+
+### 47. W12: Checkstyle・SpotBugs導入・CIワークフロー改修
+
+- **日付**: 2026/04/08
+- **ファイル**: [build.gradle](build.gradle), [config/checkstyle/checkstyle.xml](config/checkstyle/checkstyle.xml), [config/spotbugs/exclude.xml](config/spotbugs/exclude.xml), [.github/workflows/ci.yml](.github/workflows/ci.yml), [dto/ErrorResponse.java](src/main/java/com/example/todo_api_v2/dto/ErrorResponse.java), [dto/TodoBulkStatusUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoBulkStatusUpdateRequest.java)
+- **学習内容**:
+  - Checkstyle（Google Checks / v13.4.0）とSpotBugs（v6.4.8）をGradleプラグインとして導入
+  - Checkstyleは「コーディング規約（フォーマット・命名・インポート順序等）」の静的解析、SpotBugsは「潜在バグ（NullPointer・内部表現暴露等）」の静的解析と役割を理解
+  - SpotBugsのEI/EI2警告に対し、recordのコンパクトコンストラクタで`List.copyOf()`による防御的コピーを実装
+  - Spring DIのコンストラクタインジェクションによる誤検知はexclude.xmlで除外
+  - CIワークフローをJava 25に更新し、checkstyleMain/checkstyleTest/spotbugsMainをCI実行対象に追加
+
 ---
 Last Updated: 2026/04/08
