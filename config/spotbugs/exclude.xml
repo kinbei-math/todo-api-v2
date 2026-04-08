@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring DIのコンストラクタインジェクションは誤検知 -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Or>
+            <Class name="com.example.todo_api_v2.controller.TodoController"/>
+            <Class name="com.example.todo_api_v2.service.TodoService"/>
+        </Or>
+    </Match>
+    <!-- recordのList.copyOf済みフィールドの誤検知 -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Class name="com.example.todo_api_v2.dto.TodoBulkStatusUpdateRequest"/>
+    </Match>
+</FindBugsFilter>

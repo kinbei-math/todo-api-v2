@@ -1,17 +1,23 @@
-name: CI
+name: CI # この指示書のタイトルです。「CI業務マニュアル」みたいなもの。
 
-on:
-  push:
-  pull_request:
+on: # 【いつ】この指示書を実行するか（トリガーの条件）
+  push: # ①誰かがコードをプッシュしたとき
+  pull_request: # ②誰かがプルリクエストを作成・更新したとき
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
+jobs: # 【何をするか】の具体的な仕事内容
+  test: # 「test」という名前の仕事（ジョブ）
+    runs-on: ubuntu-latest # どの環境（OS）で働くか。「最新のUbuntu（Linux）パソコンを用意してね」という指示。
+
+    steps: # 具体的な作業手順（ステップ）
       - uses: actions/checkout@v4
+        # 手順1: 「GitHubの倉庫から、最新のコードを手元のパソコンにダウンロードしてきて」
+
       - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'corretto'
-      - name: Run tests
-        run: ./gradlew test
+        # 手順2: 「Javaの環境をセットアップして」
+        with: # その時の詳細設定
+          java-version: '25' # バージョンは25で
+          distribution: 'corretto' # Amazon Correttoという種類のJavaを使ってね
+
+      - name: Build with Gradle # 手順3の人間向けのメモ（表示名）
+        run: ./gradlew checkstyleMain checkstyleTest spotbugsMain test
+        # 手順3の本体: 「ターミナルで './gradlew test' というコマンドを打ち込んで、テストを実行して」

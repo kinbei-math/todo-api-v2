@@ -12,4 +12,13 @@ public record TodoBulkStatusUpdateRequest(
 
         @NotNull(message="適切な状態を送ってください")
         TodoStatus nextStatus)
-{}
+{
+        //コンパクトコンストラクタ
+        //nullの場合はNotEmptyでひっかける。
+        public TodoBulkStatusUpdateRequest{
+                if(ids!=null){
+                        ids = List.copyOf(ids);
+                }
+        }
+
+}
