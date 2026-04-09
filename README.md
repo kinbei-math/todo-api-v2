@@ -407,11 +407,20 @@ graph LR
 - **日付**: 2026/04/08
 - **ファイル**: [build.gradle](build.gradle), [config/checkstyle/checkstyle.xml](config/checkstyle/checkstyle.xml), [config/spotbugs/exclude.xml](config/spotbugs/exclude.xml), [.github/workflows/ci.yml](.github/workflows/ci.yml), [dto/ErrorResponse.java](src/main/java/com/example/todo_api_v2/dto/ErrorResponse.java), [dto/TodoBulkStatusUpdateRequest.java](src/main/java/com/example/todo_api_v2/dto/TodoBulkStatusUpdateRequest.java)
 - **学習内容**:
-  - Checkstyle（Google Checks / v13.4.0）とSpotBugs（v6.4.8）をGradleプラグインとして導入
-  - Checkstyleは「コーディング規約（フォーマット・命名・インポート順序等）」の静的解析、SpotBugsは「潜在バグ（NullPointer・内部表現暴露等）」の静的解析と役割を理解
+  - Checkstyle（Google Checks v13.4.0）とSpotBugs（v6.4.8）をGradleプラグインとして導入
   - SpotBugsのEI/EI2警告に対し、recordのコンパクトコンストラクタで`List.copyOf()`による防御的コピーを実装
   - Spring DIのコンストラクタインジェクションによる誤検知はexclude.xmlで除外
   - CIワークフローをJava 25に更新し、checkstyleMain/checkstyleTest/spotbugsMainをCI実行対象に追加
 
+### 48. W12: Branch Protection Rules・README品質チェック手順・CIバッジ・W12 DoD完了
+
+- **日付**: 2026/04/09
+- **ファイル**: [README.md](README.md), [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- **学習内容**:
+  - GitHub Branch Protection Rules設定（main → PR必須 + CIパス必須 + Force push/Delete禁止）
+  - READMEにCIバッジと品質チェック手順セクションを追加
+  - SpotBugsをテストコードに適用しない理由を言語化（異常系テストやmock使用による誤検知）
+  - W12 DoD全4項目完了（CI必須化・静的解析導入・README記載・CIバッジ）
+
 ---
-Last Updated: 2026/04/08
+Last Updated: 2026/04/09
