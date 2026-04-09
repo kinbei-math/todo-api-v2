@@ -1,3 +1,6 @@
+# Todo API v2
+![CI](https://github.com/kinbei-math/todo-api-v2/actions/workflows/ci.yml/badge.svg)
+
 ## 開発環境
 - Java: 25
 - Spring Boot: 4.0.2
@@ -132,6 +135,33 @@ graph LR
   "errors": []
 }
 ```
+---
+
+## 🛠️ 品質チェック・テスト実行手順
+
+このプロジェクトでは、コードの品質を保つためにCheckstyleとSpotBugsを導入しています。
+開発を行う際は、コミット前にローカルで以下のコマンドを実行し、すべてのチェックを通過することを確認してください。
+
+### 1. 静的解析（コーディング規約・潜在バグチェック）
+```bash
+# Checkstyle (コーディング規約違反のチェック)
+./gradlew checkstyleMain checkstyleTest
+
+# SpotBugs (潜在的なバグのチェック ※テストコードは対象外)
+./gradlew spotbugsMain
+```
+*※ SpotBugsのレポートは `build/reports/spotbugs/main.html` に出力されます。*
+
+### 2. テストの実行とカバレッジ確認
+```bash
+# 単体テスト・統合テストの実行
+./gradlew test
+
+# カバレッジレポートの出力
+./gradlew jacocoTestReport
+```
+*※ カバレッジレポートは `build/reports/jacoco/test/html/index.html` に出力されます。*
+
 ---
 
 ### 23. W4: Gradle基盤整備・Mockitoテスト・GitHub Actions CI構築
