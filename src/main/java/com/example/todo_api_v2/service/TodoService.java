@@ -3,6 +3,9 @@ package com.example.todo_api_v2.service;
 import com.example.todo_api_v2.dto.*;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.mapper.TodoMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +14,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@Slf4j//ログメッセージを出力する。Lombok
 public class TodoService {
 
     //TodoMapperをDIする
@@ -33,6 +37,8 @@ public class TodoService {
 
         //データを詰めた箱を保管庫へ保存
         todoMapper.insert(todo);
+
+        log.info("Todo created [UserID: {},TodoId: {}, title: {} ]",getCurrentUsername(),todo.getId(),todo.getTitle());//日時は自動でログに記載。失敗の場合はこのメソッドは出ないので成功判定も不要
 
         //出力用のrecordを返信
         return convertTodoResponse(todo);
@@ -67,6 +73,8 @@ public class TodoService {
 
         todoMapper.update(todo);
 
+        log.info("Todo updated [UserID: {},TodoId: {}, title: {} ]",getCurrentUsername(),todo.getId(),todo.getTitle());
+
         return convertTodoResponse(todo);
     }
 
@@ -78,6 +86,8 @@ public class TodoService {
 
         todoMapper.updateStatus(todo);
 
+        log.info("Todo changed status [UserID: {},TodoId: {},TodoStatus: {}]",getCurrentUsername(),todo.getId(),todo.getTodoStatus());
+
         return convertTodoResponse(todo);
     }
 
@@ -85,7 +95,8 @@ public class TodoService {
     //検査例外(IOException　ファイル読み込みエラー)もロールバックする
     @Transactional(rollbackFor = Exception.class)
     public List<TodoResponse> bulkChangeTodoStatus(TodoBulkStatusUpdateRequest todoBulkStatusUpdateRequest){
-        return todoBulkStatusUpdateRequest.ids().stream()
+        List<TodoResponse> todoResponsesList =
+                todoBulkStatusUpdateRequest.ids().stream()
                 .map(id ->{
                     //idが実際に保管庫にあることを確認する
                     Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
@@ -101,6 +112,11 @@ public class TodoService {
                 })
                 //TodoReponseをリスト化
                 .toList();
+
+        //transactionalのため、全処理が完全に終了してからログを出す。
+        log.info("Todo changed status [UserID: {},number of changed TodoStatus: {}]",getCurrentUsername(),todoResponsesList.size());
+
+        return todoResponsesList;
     }
 
     //保管庫にあればデータを削除　返り値はなし
@@ -108,6 +124,8 @@ public class TodoService {
     public void deleteTodo(Long id){
         todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todoMapper.delete(id);
+
+        log.info("Todo deleted [UserID: {},TodoId: {} ]",getCurrentUsername(),id);
     }
 
     //titleで部分一致するものを検索する
@@ -123,5 +141,12 @@ public class TodoService {
     //毎回変数の中で詰めなおす作業を減らせる
     private TodoResponse convertTodoResponse(Todo todo){
         return new TodoResponse(todo.getId(),todo.getTitle(),todo.getDueDate(),todo.getTodoStatus(),todo.getCompletedAt());
+    }
+
+    //認証情報のUserIdを返すメソッド
+    private String getCurrentUsername(){
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();//先に認証情報を拾う。
+        //本来ここまで未認証はきませんが、ciで通すためにnullチェックを入れました。
+        return  (auth != null) ? auth.getName() : "system";
     }
 }
