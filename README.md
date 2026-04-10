@@ -422,5 +422,15 @@ graph LR
   - SpotBugsをテストコードに適用しない理由を言語化（異常系テストやmock使用による誤検知）
   - W12 DoD全4項目完了（CI必須化・静的解析導入・README記載・CIバッジ）
 
+### 49. W13: ログ方針策定・INFO/WARN/ERRORログ実装・Spring Profile分離・W13 DoD完了
+
+- **日付**: 2026/04/10
+- **ファイル**: [service/TodoService.java](src/main/java/com/example/todo_api_v2/service/TodoService.java), [exception/GlobalExceptionHandler.java](src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java), [application.yml](src/main/resources/application.yml), [application-dev.yml](src/main/resources/application-dev.yml), [application-prod.yml](src/main/resources/application-prod.yml)
+- **学習内容**:
+  - ログレベルの使い分け方針を策定（INFO=DB変更系の正常完了、WARN=クライアント起因エラー、ERROR=サーバー起因エラー、DEBUG=GETなど副作用なし）
+  - TodoServiceの全更新系メソッドにINFOログ追加、SecurityContextHolderからユーザー情報を取得するgetCurrentUsername()をprivateメソッドに切り出し
+  - GlobalExceptionHandlerに3種のWARNログと汎用Exception.classハンドラ（ERRORログ+スタックトレース付き、セキュリティのためエラー詳細は非公開）を追加
+  - Spring Profileでapplication.ymlを共通/dev/prodに分離、環境変数による本番切替の運用方針を理解
+
 ---
-Last Updated: 2026/04/09
+Last Updated: 2026/04/10
