@@ -462,5 +462,15 @@ graph LR
   - GlobalExceptionHandlerに3種のWARNログと汎用Exception.classハンドラ（ERRORログ+スタックトレース付き、セキュリティのためエラー詳細は非公開）を追加
   - Spring Profileでapplication.ymlを共通/dev/prodに分離、環境変数による本番切替の運用方針を理解
 
+### 50. W14: Docker基礎理解・MySQLコンテナ起動（Step①完了）
+
+- **日付**: 2026/04/16
+- **ファイル**: なし（環境構築のみ）
+- **学習内容**:
+  - Dockerの基本概念を理解（環境の再現性・コンテナは使い捨て・データはボリュームで永続化・本番はAWS RDS等マネージドDBが主流）
+  - MySQL 8.4コンテナ（todo-mysql）を起動し、docker ps / docker logs / docker exec でtododbとtodouserの作成を確認
+  - ポートフォワーディング（-p 3306:3306 = PC側ポート:コンテナ側ポート）の仕組みを理解、アプリはPC側のポートにしか接続できない
+  - 最小権限の原則を実例で理解：アプリからはrootではなくtodouser（tododbのみアクセス可）で接続することでSQLインジェクション被害を限定する
+
 ---
-Last Updated: 2026/04/10
+Last Updated: 2026/04/16
