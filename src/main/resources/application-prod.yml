@@ -1,1 +1,9 @@
-#今後、本番用想定のMYSQLの接続設定を書く。
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/tododb}
+    driverClassName: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:todouser}
+    password: ${DB_PASSWORD:todopass}
+  sql:
+    init:
+      mode: never
