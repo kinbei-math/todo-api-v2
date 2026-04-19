@@ -23,49 +23,88 @@ gradlew.bat bootRun
 | GET | `/health` | アプリケーションが正常に稼働しているか（ヘルスチェック）を確認する |
 | GET | `/todos` | 現在登録されているTodoの一覧（リスト）を取得する |
 
-### W5-D1課題: READMEにレイヤードアーキテクチャの図を追加する
+## 🏗️ アーキテクチャ構成とデータの流れ
 
-## アーキテクチャ構成とデータの流れ
-
-本アプリケーションは、メンテナンス性・拡張性を考慮し、レイヤードアーキテクチャで構成されています。
-現在はController / Serviceの2層構成で、W6以降でRepositoryを追加し3層構成に移行予定です。
+本アプリケーションは、保守性と拡張性を高めるためにレイヤードアーキテクチャを採用しています。
+初期のインメモリ構成から改修を行い、現在はSpring Securityを用いた認証・認可、MyBatisによるデータベースアクセス、および共通例外ハンドリングを備えた構成となっています。
 
 ```mermaid
 graph LR
     %% ノードの定義
     Client[Client<br/>ブラウザ / curl]
-    Controller[Controller<br/>TodoController]
-    Service[Service<br/>TodoService]
-    Memory[(MemoryList<br/>todoList)]
 
-    %% リクエスト（行き）の流れ
-    Client -->|① HTTPリクエスト| Controller
-    Controller -->|② メソッド呼び出し| Service
-    Service -->|③ データの取得・保存| Memory
+    subgraph Spring Boot Application
+        Security[Spring Security<br/>認証・認可]
+        Controller[Controller<br/>プレゼンテーション層]
+        Service[Service<br/>ビジネスロジック層]
+        Mapper[Mapper / MyBatis<br/>データアクセス層]
+        ExceptionHandler[GlobalExceptionHandler<br/>例外ハンドリング]
+    end
 
-    %% レスポンス（帰り）の流れ
-    Memory -.->|④ 操作結果| Service
-    Service -.->|⑤ 戻り値| Controller
-    Controller -.->|⑥ HTTPレスポンス| Client
+    subgraph Database
+        DB[(H2 / MySQL<br/>Flyway管理)]
+    end
 
-    %% スタイルの設定
-    style Memory fill:#f9f,stroke:#333,stroke-width:2px
+    %% 正常系の流れ
+    Client -->|① リクエスト| Security
+    Security -->|② 認証OK| Controller
+    Controller -->|③ メソッド呼び出し| Service
+    Service -->|④ データ操作要求| Mapper
+    Mapper -->|⑤ SQL実行| DB
+
+    DB -.->|⑥ 取得結果| Mapper
+    Mapper -.->|⑦ DTO/Entity| Service
+    Service -.->|⑧ 処理結果| Controller
+    Controller -.->|⑨ HTTPレスポンス| Client
+
+    %% 例外系の流れ
+    Security -.->|❌ 認証エラー| Client
+    Controller -.->|⚠️ 例外発生| ExceptionHandler
+    Service -.->|⚠️ 例外発生| ExceptionHandler
+    ExceptionHandler -.->|統一エラーJSON| Client
+
+    %% スタイル
+    style DB fill:#f9f,stroke:#333,stroke-width:2px
 ```
 
-### 各層の責務
-- **Controller**: 外部からの通信の窓口です。HTTPリクエスト（JSONなど）を受け取り、Javaオブジェクトに変換してServiceに処理を依頼します。最終的にレスポンスを返却します。
-- **Service**: 業務ロジック（ビジネスルール）を担当します。Controllerからの依頼を受け、データの加工や判断を行います。
-- **Repository（W6以降で導入予定）**: データベースへのデータの保存・取得を担当します。現在はService内のメモリ（List）を保管庫として代用しています。
+### 🏢 各層の役割
 
-### 💡 補足：メソッドによる通信の違い（POST / GET）
-上記の図の **②（メソッド呼び出し）** と **⑤（戻り値）** において、リクエストの種類によって扱うデータが以下のように異なります。
+- **Spring Security (認証・認可)**
+  - アプリケーションのアクセス制御を担います。すべてのリクエストをインターセプトし、未認証（401）や権限不足（403）の不正なアクセスをController到達前にブロックします。
+- **Controller (プレゼンテーション層)**
+  - クライアントからのHTTPリクエストを受け付け、入力値のバリデーションを行います。適切なServiceを呼び出し、処理結果をJSON形式のHTTPレスポンスとして返却します。
+- **Service (ビジネスロジック層)**
+  - アプリケーションのコアとなる処理を担当します。Todoの操作や権限の検証など、ドメイン固有のビジネスルールを実行し、必要に応じてMapperを呼び出します。
+- **Mapper (データアクセス層 / MyBatis)**
+  - データベースとの連携を担当します。Serviceからの要求に基づきMyBatis経由でSQLを実行し、取得したレコードをJavaオブジェクト（Entity/DTO）にマッピングします。
+- **Database & Spring Profile**
+  - 環境変数（`spring.profiles.active`）の指定により、開発環境（H2）と本番環境（MySQL）の接続先を切り替えます。DBのスキーマ構築および初期データ投入は、Flywayによってバージョン管理・自動化されています。
+- **GlobalExceptionHandler (例外ハンドリング)**
+  - アプリケーション内で発生した各種例外（Exception）を横断的に捕捉し、フロントエンド側で処理しやすい統一されたエラーレスポンスフォーマット（JSON）に変換して返却します。
 
-- **登録時（POST `/todos`）**
-  - **② 渡すもの**: JSONから取り出した登録用の文字列（`CreateTodoRequest` の `title`）
-  - **⑤ 返るもの**: 「〜を登録しました」というメッセージの文字列（`String`）
-- **一覧取得時（GET `/todos`）**
-  - **② 渡すもの**: なし（全件取得のメソッドを引数なしで呼び出すのみ）
-  - **⑤ 返るもの**: 現在登録されているすべてのTodoのリスト（`List<String>`）
+## データベース設計(ER図)
+
+本アプリケーションはデータベース構造は以下の通りです。
+Flywayを導入し、データベースのマイグレーションを自動化しています。
+Week14時点。今後はtodosにuser_idを追加して、外部キーとして繋げる。
+
+```mermaid
+erDiagram
+    users{
+         BIGINT id PK "自動採番"
+         VARCHAR(255) email UK "一意なログインID"
+         VARCHAR(20) role "権限:USER,ADMIN"
+         VARCHAR(255) password_hash "ハッシュ化パスワード"
+    }
+
+    todos{
+         BIGINT id PK "自動採番"
+         VARCHAR(255) title "タスクのタイトル"
+         DATE due_date "期限日"
+         VARCHAR(20) todo_status "状態:TODO,DOING,DONE"
+         TIMESTAMP completed_at "完了絶対時刻"
+    }
+```
 
 ## 🔐 認可（アクセス制御）の設計方針(W10時点)
 
