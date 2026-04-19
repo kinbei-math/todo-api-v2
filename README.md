@@ -501,5 +501,25 @@ erDiagram
   - GlobalExceptionHandlerに3種のWARNログと汎用Exception.classハンドラ（ERRORログ+スタックトレース付き、セキュリティのためエラー詳細は非公開）を追加
   - Spring Profileでapplication.ymlを共通/dev/prodに分離、環境変数による本番切替の運用方針を理解
 
+### 50. W14: Docker基礎理解・MySQLコンテナ起動（Step①完了）
+
+- **日付**: 2026/04/16
+- **ファイル**: なし（環境構築のみ）
+- **学習内容**:
+  - Dockerの基本概念を理解（環境の再現性・コンテナは使い捨て・データはボリュームで永続化・本番はAWS RDS等マネージドDBが主流）
+  - MySQL 8.4コンテナ（todo-mysql）を起動し、docker ps / docker logs / docker exec でtododbとtodouserの作成を確認
+  - ポートフォワーディング（-p 3306:3306 = PC側ポート:コンテナ側ポート）の仕組みを理解、アプリはPC側のポートにしか接続できない
+  - 最小権限の原則を実例で理解：アプリからはrootではなくtodouser（tododbのみアクセス可）で接続することでSQLインジェクション被害を限定する
+
+### 51. W14: MySQL移行（Docker）・Flyway導入・FlywayMigrationTest・ER図・アーキテクチャ図更新・W14 DoD全完了
+
+- **日付**: 2026/04/19
+- **ファイル**: [build.gradle](build.gradle), [application.yml](src/main/resources/application.yml), [application-dev.yml](src/main/resources/application-dev.yml), [application-prod.yml](src/main/resources/application-prod.yml), [V1__create_todos_table.sql](src/main/resources/db/migration/V1__create_todos_table.sql), [V2__insert_initial_data.sql](src/main/resources/db/migration/V2__insert_initial_data.sql), [FlywayMigrationTest.java](src/test/java/com/example/todo_api_v2/FlywayMigrationTest.java), [README.md](README.md)
+- **学習内容**:
+  - Docker MySQLコンテナ（todo-mysql）にapplication-prod.ymlで環境変数プレースホルダ経由で接続、runtimeOnlyでMySQL JDBCドライバ追加
+  - Flyway導入（spring-boot-starter-flyway + flyway-mysql）でschema.sql/data.sqlをV1/V2マイグレーションに統合、dev/prod両環境でFlyway管理に統一
+  - MySQLのSQLコメントルール（--の後に半角スペース必須）でH2との方言差異を体験、コンテナリセットで対応
+  - FlywayMigrationTest（V2初期データの存在確認）追加でテスト31本オールグリーン、ER図・アーキテクチャ図をREADMEに追加
+
 ---
-Last Updated: 2026/04/10
+Last Updated: 2026/04/19
