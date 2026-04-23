@@ -531,5 +531,15 @@ erDiagram
   - 制約設計5件: FKはON DELETE RESTRICT（履歴は消さない）、CHECK (qty > 0)、UNIQUE/FK/CHECKは名前付き（uk_/fk_/chk_）、movement_dateのインデックスはW17以降にYAGNI判断、ON UPDATEはH2非対応のためアプリ側で手動セット
   - スコープ管理: is_stock_managed と allow_negative_allocation はYAGNI適用で不採用、reorder_point/safety_stockはW17でALTER TABLE（W14-D1深掘り課題と連動）
 
+### 53. W15: Flyway V3/V4 マイグレーション実装（items + stock_movements テーブル作成）
+
+- **日付**: 2026/04/22
+- **ファイル**: [db/migration/V3__create_items_table.sql](src/main/resources/db/migration/V3__create_items_table.sql), [db/migration/V4__create_stock_movements_table.sql](src/main/resources/db/migration/V4__create_stock_movements_table.sql)
+- **学習内容**:
+  - items テーブル作成（item_code UNIQUE + サロゲートキー分離、uom/category は enum をVARCHARで保存、created_at/updated_at に DEFAULT CURRENT_TIMESTAMP）
+  - stock_movements テーブル作成（FK item_id ON DELETE RESTRICT、CHECK (qty > 0) で多層防御、movement_date(DATE)とcreated_at(TIMESTAMP)でBusiness/System Time分離）
+  - イミュータブル設計を採用（updated_atなし）。誤入力時は打ち消し伝票＋再登録で表現する方針
+  - DEFAULT CURRENT_TIMESTAMP（INSERT時デフォルト、H2対応）と ON UPDATE CURRENT_TIMESTAMP（UPDATE時自動更新、H2非対応）の違いを理解し、updated_atはINSERT時はDBデフォルト・UPDATE時はアプリでNOW()明示の役割分担に決定
+  - 制約名は業界標準の pk_/uk_/fk_/chk_ プレフィックスで統一し、テーブル名の単複を揃える
 ---
-Last Updated: 2026/04/20
+Last Updated: 2026/04/23
