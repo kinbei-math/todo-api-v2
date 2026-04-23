@@ -521,5 +521,15 @@ erDiagram
   - MySQLのSQLコメントルール（--の後に半角スペース必須）でH2との方言差異を体験、コンテナリセットで対応
   - FlywayMigrationTest（V2初期データの存在確認）追加でテスト31本オールグリーン、ER図・アーキテクチャ図をREADMEに追加
 
+### 52. W15: 在庫拡張設計フェーズ完了（Item + StockMovementのER設計・型判断・制約設計）
+
+- **日付**: 2026/04/21
+- **ファイル**: (設計のみ、実装は明日以降)
+- **学習内容**:
+  - ドメイン設計の4原則を確立: イベントソーシング（現在庫はSUMで算出）・Business/System Time分離（movement_date と created_at）・サロゲートキーと業務コードの分離・監査ログ原則（created_byはString保存）
+  - 型判断3件: movement_typeはenum（TodoStatusの横展開）、qtyはBigDecimal + CHECK制約（2進浮動小数点誤差を回避、多層防御）、created_byはString（マスタとの疎結合と不変性）
+  - 制約設計5件: FKはON DELETE RESTRICT（履歴は消さない）、CHECK (qty > 0)、UNIQUE/FK/CHECKは名前付き（uk_/fk_/chk_）、movement_dateのインデックスはW17以降にYAGNI判断、ON UPDATEはH2非対応のためアプリ側で手動セット
+  - スコープ管理: is_stock_managed と allow_negative_allocation はYAGNI適用で不採用、reorder_point/safety_stockはW17でALTER TABLE（W14-D1深掘り課題と連動）
+
 ---
-Last Updated: 2026/04/19
+Last Updated: 2026/04/20
