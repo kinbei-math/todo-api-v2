@@ -541,5 +541,16 @@ erDiagram
   - イミュータブル設計を採用（updated_atなし）。誤入力時は打ち消し伝票＋再登録で表現する方針
   - DEFAULT CURRENT_TIMESTAMP（INSERT時デフォルト、H2対応）と ON UPDATE CURRENT_TIMESTAMP（UPDATE時自動更新、H2非対応）の違いを理解し、updated_atはINSERT時はDBデフォルト・UPDATE時はアプリでNOW()明示の役割分担に決定
   - 制約名は業界標準の pk_/uk_/fk_/chk_ プレフィックスで統一し、テーブル名の単複を揃える
+
+### 54. W15: SecurityConfig dev用FilterChain追加 + FlywayMigrationTest拡張（DB制約のテスト自動化）
+
+- **日付**: 2026/04/26
+- **ファイル**: [SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java), [FlywayMigrationTest.java](src/test/java/com/example/todo_api_v2/db/FlywayMigrationTest.java)
+- **学習内容**:
+  - dev環境専用のSecurityFilterChainを追加（@Profile("dev") + @Order(1)、/h2-console/**を許可、frameOptions sameOrigin、CSRF無効）。prod環境ではBean自体が生成されない二重の安全弁
+  - H2コンソール起動問題（Spring Boot 4.0.2 + H2 2.4.240の組み合わせでH2ConsoleAutoConfigurationが動作せず）を深掘り課題W15-D5に格下げし、テストコードによる代替検証へ方針転換
+  - FlywayMigrationTestを4本追加：itemsテーブル存在確認、stock_movementsテーブル存在確認、CHECK制約（qty > 0）違反確認、FK制約（不正なitem_id）違反確認
+  - JdbcTemplate + プリペアドステートメントで堅牢なテストデータ操作（item_codeでID取得しサロゲートキー依存を排除）
+  - @Transactionalでテスト独立性を確保。GUIツールに頼らずCIで自動検証可能な形に成果物を昇華
 ---
-Last Updated: 2026/04/23
+Last Updated: 2026/04/26
