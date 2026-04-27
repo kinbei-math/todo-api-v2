@@ -552,5 +552,18 @@ erDiagram
   - FlywayMigrationTestを4本追加：itemsテーブル存在確認、stock_movementsテーブル存在確認、CHECK制約（qty > 0）違反確認、FK制約（不正なitem_id）違反確認
   - JdbcTemplate + プリペアドステートメントで堅牢なテストデータ操作（item_codeでID取得しサロゲートキー依存を排除）
   - @Transactionalでテスト独立性を確保。GUIツールに頼らずCIで自動検証可能な形に成果物を昇華
+
+### 55. W15: Item基盤実装（enum + entity + Request DTO + Mapper + Mapperテスト）
+
+- **日付**: 2026/04/27
+- **ファイル**: [UomType.java](src/main/java/com/example/todo_api_v2/entity/UomType.java), [Category.java](src/main/java/com/example/todo_api_v2/entity/Category.java), [Item.java](src/main/java/com/example/todo_api_v2/entity/Item.java), [ItemCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/ItemCreateRequest.java), [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [ItemMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java)
+- **学習内容**:
+  - UomType / Category enum を定義（単位5値・カテゴリ5値、enumをVARCHARでDBに保存する設計）
+  - Item エンティティ実装（class + Lombok @Getter/@Setter、name フィールドはDB の item_name と AS エイリアスでマッピング）
+  - ItemCreateRequest を record + Bean Validation で実装、品目マスタのバリデーションをDoD達成
+  - ItemMapper 実装（findById/findAll/insert、明示カラム指定 + AS name エイリアス + @Options で採番ID取得）
+  - ItemMapperTest 3本実装（@SpringBootTest + @Transactional、AssertJ）
+  - レイヤー別テスト戦略を整理：Service層はMockitoでユニット、Mapper層は実DBで統合、Controller層はMockMvcでスライス。テストピラミッドに沿った設計
+  - INSERT文では AS エイリアス不可（SELECT文の出力列の別名のための機能）の落とし穴を体験
 ---
-Last Updated: 2026/04/26
+Last Updated: 2026/04/27
