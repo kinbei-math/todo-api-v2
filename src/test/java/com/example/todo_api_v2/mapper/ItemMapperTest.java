@@ -71,6 +71,31 @@ public class ItemMapperTest {
         assertThat(itemList.get(1).getItemCode()).isEqualTo("TEST-0002");
     }
 
+    @Test
+    @DisplayName("findByItemCodeで存在する品目が取得できる")
+    void findByItemCode_shouldReturnItem_whenItemExists() {
+        // Insert用 Itemの作成
+        Item item = createTestItem("TEST-0001", "testName");
+        itemMapper.insert(item);
+
+        // 実行
+        Optional<Item> found = itemMapper.findByItemCode("TEST-0001");
+
+        // 検証
+        assertThat(found).isPresent();
+        Item testItem = found.get();
+        assertThat(testItem.getItemCode()).isEqualTo("TEST-0001");
+    }
+
+    @Test
+    @DisplayName("findByItemCodeで存在しない品目はEmptyが返る")
+    void findByItemCode_shouldReturnEmpty_whenItemNotExists() {
+        // 実行
+        Optional<Item> found = itemMapper.findByItemCode("NONEXISTENT-9999");
+
+        // 検証
+        assertThat(found).isEmpty();
+    }
 
     // テスト用のヘルプメソッド
     private Item createTestItem(String itemCode,String name){

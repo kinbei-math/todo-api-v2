@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.lang.annotation.Target;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -27,6 +28,7 @@ public class TodoService {
     //TodoをRepositoryに渡す。
     //todoをControllerから受け取る。レコードの型で(TodoCreateRequest)
     //受け取ったレコードの型からTodoというEntityの箱に詰める
+    @Transactional
     public TodoResponse createTodo(TodoCreateRequest todoCreateRequest){
         //保存用のTodo(Entity)の箱を用意
         Todo todo = new Todo();
@@ -66,6 +68,7 @@ public class TodoService {
 
     //保管庫にあるデータを探して置き換える
     //保管庫にないデータの場合は例外を投げる
+    @Transactional
     public TodoResponse updateTodo(TodoUpdateRequest todoUpdateRequest,Long id){
         Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todo.setTitle(todoUpdateRequest.title());
@@ -80,6 +83,7 @@ public class TodoService {
 
     //保管庫にあるデータのstatusを変化させる
     //保管庫にない場合は例外を投げる
+    @Transactional
     public TodoResponse changeTodoStatus(TodoStatusUpdateRequest todoStatusUpdateRequest,Long id){
         Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todo.changeStatus(todoStatusUpdateRequest.nextStatus());
@@ -121,6 +125,7 @@ public class TodoService {
 
     //保管庫にあればデータを削除　返り値はなし
     //保管庫にない場合は例外を投げる
+    @Transactional
     public void deleteTodo(Long id){
         todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todoMapper.delete(id);

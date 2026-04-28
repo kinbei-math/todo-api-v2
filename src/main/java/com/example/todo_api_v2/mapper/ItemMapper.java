@@ -53,4 +53,20 @@ public interface ItemMapper {
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Item item);
+
+    // 4. ItemCodeで検索
+    @Select("""
+            SELECT
+                id,
+                item_code,
+                item_name AS name,
+                uom,
+                category,
+                created_at,
+                updated_at
+            FROM items
+            WHERE item_code = #{itemCode}
+            """
+    )
+    Optional<Item> findByItemCode(String itemCode);
 }

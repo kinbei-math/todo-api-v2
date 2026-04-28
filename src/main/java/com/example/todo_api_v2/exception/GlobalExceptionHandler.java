@@ -40,16 +40,25 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoSuchElementException(NoSuchElementException ex){
 
         log.warn("NoSuchElementException [message = {}]",ex.getMessage());
-        //Validationと比較して、エラーの種類が今は１つしかないのでシンプルに整理する。
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(404,"Todoが見つかりません。"));
+        // Validationと比較して、エラーの種類が今は１つしかないのでシンプルに整理する。
+        // →Itemを追加したのでメッセージを動的にする。これに揃えてその他も動的に。
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(404,ex.getMessage()));
     }
 
-    //InvalidStatusTransitionExceptionを処理するメソッド
-    //入力は正しいが、不正な状態遷移を表す
+    // 入力は正しいが、不正な状態遷移を表す
+    // 独自例外InvalidStatusTransitionExceptionを処理するメソッド
     @ExceptionHandler(InvalidStatusTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidStatusTransitionException(InvalidStatusTransitionException ex){
         log.warn("InvalidStatusTransitionException [message = {}]",ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409,"許可されていない状態遷移です"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409,ex.getMessage()));
+    }
+
+    // 重複したItemCodeの入力エラー
+    // 独自例外クラスDuplicateItemCodeExceptionをハンドリング
+    @ExceptionHandler(DuplicateItemCodeException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateItemCodeException(DuplicateItemCodeException ex){
+        log.warn("DuplicateItemCodeException [message = {}]", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409, ex.getMessage()));
     }
 
     //Exception.classを捕まえる汎用ハンドラ
