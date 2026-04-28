@@ -565,5 +565,17 @@ erDiagram
   - ItemMapperTest 3本実装（@SpringBootTest + @Transactional、AssertJ）
   - レイヤー別テスト戦略を整理：Service層はMockitoでユニット、Mapper層は実DBで統合、Controller層はMockMvcでスライス。テストピラミッドに沿った設計
   - INSERT文では AS エイリアス不可（SELECT文の出力列の別名のための機能）の落とし穴を体験
+
+### 56. W15: ItemService実装＋ドメイン例外設計（多層防御の重複チェック）
+
+- **日付**: 2026/04/28
+- **ファイル**: [ItemService.java](src/main/java/com/example/todo_api_v2/service/ItemService.java), [ItemNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/ItemNotFoundException.java), [DuplicateItemCodeException.java](src/main/java/com/example/todo_api_v2/exception/DuplicateItemCodeException.java), [GlobalExceptionHandler.java](src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java), [ItemResponse.java](src/main/java/com/example/todo_api_v2/dto/ItemResponse.java), [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [ItemMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java)
+- **学習内容**:
+  - ドメイン例外2つを継承元の意味で選択（ItemNotFoundExceptionはNoSuchElementException派生、DuplicateItemCodeExceptionはIllegalStateException派生）
+  - GlobalExceptionHandlerのメッセージを動的化（ex.getMessage()）。Todo/Item/将来エンティティで共通化、IDなど動的情報も含められる
+  - ItemResponseをrecordで定義し、ItemMapperにfindByItemCodeを追加（重複チェック用）
+  - ItemServiceで多層防御の重複チェックを実装（Service層のSELECT + DB層のUNIQUE制約。SELECTとINSERTの間に競合状態の隙間があるが、DBが最終防御）
+  - createItemに@Transactionalを付与し、複数SQLの整合性を保証
+  - Optionalのメソッドは「そのメソッドが何をする時に呼ばれるか」を意識して使うべき。orElseThrowを思考停止で使って重複チェックロジックを逆向きに実装するバグを修正
 ---
-Last Updated: 2026/04/27
+Last Updated: 2026/04/28
