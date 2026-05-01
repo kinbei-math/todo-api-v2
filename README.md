@@ -577,5 +577,17 @@ erDiagram
   - ItemServiceで多層防御の重複チェックを実装（Service層のSELECT + DB層のUNIQUE制約。SELECTとINSERTの間に競合状態の隙間があるが、DBが最終防御）
   - createItemに@Transactionalを付与し、複数SQLの整合性を保証
   - Optionalのメソッドは「そのメソッドが何をする時に呼ばれるか」を意識して使うべき。orElseThrowを思考停止で使って重複チェックロジックを逆向きに実装するバグを修正
+
+### 57. W15: ItemController + 全レイヤーテスト完成（DoD#1完全達成）
+
+- **日付**: 2026/04/29
+- **ファイル**: [ItemController.java](src/main/java/com/example/todo_api_v2/controller/ItemController.java), [ItemServiceTest.java](src/test/java/com/example/todo_api_v2/service/ItemServiceTest.java), [ItemControllerTest.java](src/test/java/com/example/todo_api_v2/controller/ItemControllerTest.java), [SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java)
+- **学習内容**:
+  - ItemServiceTestをMockitoで実装（5本）。Mapperを@Mockでモック化し、@InjectMocksでServiceに注入。when().thenReturn()で振る舞い定義、verify()で副作用検証
+  - 例外系テストでverify(itemMapper, never()).insert(...)を使い、「例外を投げる + 副作用が起きない」両方を保証
+  - ItemController実装（GET/{id}, GET, POST）。TodoControllerのResponseEntity<T>明示スタイル踏襲
+  - ItemControllerTestをMockMvcで実装（8本）。@WithMockUserで認証モック、HTTPステータス200/201/400/401/404/409を全方位カバー
+  - SecurityConfigの修正：authorizeHttpRequestsは同一FilterChain内で1回しか呼べないため、Item用の追加ブロックを削除。anyRequest().authenticated()でカバーされるためYAGNI原則で十分
+  - Item CRUD全レイヤー（Mapper/Service/Controller）で合計18テスト緑、テストピラミッドの完全な実装
 ---
-Last Updated: 2026/04/28
+Last Updated: 2026/05/01
