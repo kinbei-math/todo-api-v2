@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 public record ItemCreateRequest(
         @NotBlank(message = "品目コードを入力してください")
         @Size(max=20, message = "品目コードは20文字以内で入力してください")
-        @Pattern(regexp = "^[\\x21-\\x7E]+$", message = "品目コードは半角英数字記号で入力してください")
+        @Pattern(regexp = "^[\\x21-\\x7E]*$", message = "品目コードは半角英数字記号で入力してください")
         String itemCode,
 
         @NotBlank(message = "品名を入力してください")
