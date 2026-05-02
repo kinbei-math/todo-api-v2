@@ -580,7 +580,7 @@ erDiagram
 
 ### 57. W15: ItemController + 全レイヤーテスト完成（DoD#1完全達成）
 
-- **日付**: 2026/04/29
+- **日付**: 2026/05/01
 - **ファイル**: [ItemController.java](src/main/java/com/example/todo_api_v2/controller/ItemController.java), [ItemServiceTest.java](src/test/java/com/example/todo_api_v2/service/ItemServiceTest.java), [ItemControllerTest.java](src/test/java/com/example/todo_api_v2/controller/ItemControllerTest.java), [SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java)
 - **学習内容**:
   - ItemServiceTestをMockitoで実装（5本）。Mapperを@Mockでモック化し、@InjectMocksでServiceに注入。when().thenReturn()で振る舞い定義、verify()で副作用検証
@@ -589,5 +589,19 @@ erDiagram
   - ItemControllerTestをMockMvcで実装（8本）。@WithMockUserで認証モック、HTTPステータス200/201/400/401/404/409を全方位カバー
   - SecurityConfigの修正：authorizeHttpRequestsは同一FilterChain内で1回しか呼べないため、Item用の追加ブロックを削除。anyRequest().authenticated()でカバーされるためYAGNI原則で十分
   - Item CRUD全レイヤー（Mapper/Service/Controller）で合計18テスト緑、テストピラミッドの完全な実装
+
+### 58. W15: StockMovementシステムの設計議論完了（DoD#2-3に向けた準備）
+
+- **日付**: 2026/05/02
+- **ファイル**: 設計議論のみ（実装は明日以降）
+- **学習内容**:
+  - エンドポイント設計：独立リソース型（POST /stock-movements）を採用、シンプルさと拡張性を重視
+  - StockMovementController を新規作成（SOLIDのS：単一責任原則）
+  - StockMovementCreateRequest にitemId/movementType/qty/movementDateを含める設計
+  - StockResponseでitemId/itemCode/name/currentStock/uomを返す（単位情報を含めることでクライアント親切設計）
+  - 現在庫はW15では全期間SUMのみ実装、過去日付スナップショットはW17に伏線として残す
+  - 「履歴は独立リソース、現在状態は属性アクセス」という設計思想を言語化
+  - 実装すべき13ファイルをリストアップ、明日からの実装フローを確定
+
 ---
-Last Updated: 2026/05/01
+Last Updated: 2026/05/02
