@@ -603,5 +603,17 @@ erDiagram
   - 「履歴は独立リソース、現在状態は属性アクセス」という設計思想を言語化
   - 実装すべき13ファイルをリストアップ、明日からの実装フローを確定
 
+### 59. W15: StockMovementデータアクセス層完成（enum + entity + DTO + Mapper + Test）
+
+- **日付**: 2026/05/03
+- **ファイル**: [MovementType.java](src/main/java/com/example/todo_api_v2/entity/MovementType.java), [StockMovement.java](src/main/java/com/example/todo_api_v2/entity/StockMovement.java), [StockMovementCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/StockMovementCreateRequest.java), [StockResponse.java](src/main/java/com/example/todo_api_v2/dto/StockResponse.java), [StockMovementMapper.java](src/main/java/com/example/todo_api_v2/mapper/StockMovementMapper.java), [StockMovementMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/StockMovementMapperTest.java)
+- **学習内容**:
+  - MovementType enum（INBOUND/OUTBOUND）と StockMovement エンティティ（updated_atなしのイミュータブル設計）を実装
+  - StockMovementCreateRequest を record + Bean Validation で実装（@Digits + @Positive で DECIMAL(12,3) と CHECK制約をJava側にも反映、多層防御）
+  - StockResponse を record で実装（itemId/itemCode/name/currentStock/uom）
+  - StockMovementMapper を実装：insert と sumByItemId（COALESCE + CASE WHEN）で SUM 集計をDB側で完結
+  - SQL文字列リテラルの typo（COALSECE / INBOOUD / INBOUD / cratedBy）を順次レビューで修正、サイレントバグの危険性を実体験
+  - StockMovementMapperTest 4本（insert / SUM 0件 / SUM 入庫のみ / SUM 入出庫混在）を実装、全テスト緑
+  - BigDecimal 比較は isEqualByComparingTo を使い、スケール違いに左右されない数値比較を学んだ
 ---
-Last Updated: 2026/05/02
+Last Updated: 2026/05/06
