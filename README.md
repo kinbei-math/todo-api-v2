@@ -605,7 +605,7 @@ erDiagram
 
 ### 59. W15: StockMovementデータアクセス層完成（enum + entity + DTO + Mapper + Test）
 
-- **日付**: 2026/05/03
+- **日付**: 2026/05/06
 - **ファイル**: [MovementType.java](src/main/java/com/example/todo_api_v2/entity/MovementType.java), [StockMovement.java](src/main/java/com/example/todo_api_v2/entity/StockMovement.java), [StockMovementCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/StockMovementCreateRequest.java), [StockResponse.java](src/main/java/com/example/todo_api_v2/dto/StockResponse.java), [StockMovementMapper.java](src/main/java/com/example/todo_api_v2/mapper/StockMovementMapper.java), [StockMovementMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/StockMovementMapperTest.java)
 - **学習内容**:
   - MovementType enum（INBOUND/OUTBOUND）と StockMovement エンティティ（updated_atなしのイミュータブル設計）を実装
@@ -615,5 +615,16 @@ erDiagram
   - SQL文字列リテラルの typo（COALSECE / INBOOUD / INBOUD / cratedBy）を順次レビューで修正、サイレントバグの危険性を実体験
   - StockMovementMapperTest 4本（insert / SUM 0件 / SUM 入庫のみ / SUM 入出庫混在）を実装、全テスト緑
   - BigDecimal 比較は isEqualByComparingTo を使い、スケール違いに左右されない数値比較を学んだ
+
+### 60. W15: StockMovementService完成 + ItemMapper.existsById追加（Service層完成）
+
+- **日付**: 2026/05/07
+- **ファイル**: [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [StockMovementResponse.java](src/main/java/com/example/todo_api_v2/dto/StockMovementResponse.java), [StockMovementService.java](src/main/java/com/example/todo_api_v2/service/StockMovementService.java), [StockMovementServiceTest.java](src/test/java/com/example/todo_api_v2/service/StockMovementServiceTest.java)
+- **学習内容**:
+  - ItemMapper に existsById を追加。SELECT EXISTS構文で1件見つけた瞬間に終了する最速SQL（COUNT(*) > 0 との性能差を理解）
+  - StockMovementService 実装：itemMapper.existsById で存在チェック、ItemNotFoundException で一貫した例外設計、@Transactional で多層防御
+  - convertStockMovement と convertStockMovementResponse の2つのprivateヘルパーで責務分離（ItemServiceから一段進化したリファクタリング）
+  - StockMovementServiceTest を Mockito で実装（2本）。verify(never())で副作用なしを保証、createdBy = "system" の認証なし時のフォールバック動作も検証
+  - レイヤー別テスト責務分離：Service層は認証情報をモックせず、Controller層（MockMvc + @WithMockUser）で本物のusername検証を行う設計判断
 ---
-Last Updated: 2026/05/06
+Last Updated: 2026/05/07
