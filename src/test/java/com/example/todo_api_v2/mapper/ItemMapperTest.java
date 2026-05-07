@@ -97,6 +97,30 @@ public class ItemMapperTest {
         assertThat(found).isEmpty();
     }
 
+    @Test
+    @DisplayName("existsByIdで存在する品目はtrueを返す")
+    void existsById_shouldReturnTrue_whenItemExists() {
+        // 準備
+        Item item = createTestItem("TEST-0001", "testName");
+        itemMapper.insert(item);
+
+        // 実行
+        Boolean exists = itemMapper.existsById(item.getId());
+
+        // 検証
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("existsByIdで存在しない品目はfalseを返す")
+    void existsById_shouldReturnFalse_whenItemNotExists() {
+        // 実行
+        Boolean exists = itemMapper.existsById(999L);
+
+        // 検証
+        assertThat(exists).isFalse();
+    }
+
     // テスト用のヘルプメソッド
     private Item createTestItem(String itemCode,String name){
         Item item = new Item();

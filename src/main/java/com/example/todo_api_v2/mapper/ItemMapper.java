@@ -69,4 +69,8 @@ public interface ItemMapper {
             """
     )
     Optional<Item> findByItemCode(String itemCode);
+
+    // 5. ItemIdが存在するかの確認
+    @Select("SELECT EXISTS (SELECT 1 FROM items WHERE id = #{id})")
+    boolean existsById(Long id);
 }
