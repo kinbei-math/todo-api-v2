@@ -521,5 +521,122 @@ erDiagram
   - MySQLのSQLコメントルール（--の後に半角スペース必須）でH2との方言差異を体験、コンテナリセットで対応
   - FlywayMigrationTest（V2初期データの存在確認）追加でテスト31本オールグリーン、ER図・アーキテクチャ図をREADMEに追加
 
+### 52. W15: 在庫拡張設計フェーズ完了（Item + StockMovementのER設計・型判断・制約設計）
+
+- **日付**: 2026/04/21
+- **ファイル**: (設計のみ、実装は明日以降)
+- **学習内容**:
+  - ドメイン設計の4原則を確立: イベントソーシング（現在庫はSUMで算出）・Business/System Time分離（movement_date と created_at）・サロゲートキーと業務コードの分離・監査ログ原則（created_byはString保存）
+  - 型判断3件: movement_typeはenum（TodoStatusの横展開）、qtyはBigDecimal + CHECK制約（2進浮動小数点誤差を回避、多層防御）、created_byはString（マスタとの疎結合と不変性）
+  - 制約設計5件: FKはON DELETE RESTRICT（履歴は消さない）、CHECK (qty > 0)、UNIQUE/FK/CHECKは名前付き（uk_/fk_/chk_）、movement_dateのインデックスはW17以降にYAGNI判断、ON UPDATEはH2非対応のためアプリ側で手動セット
+  - スコープ管理: is_stock_managed と allow_negative_allocation はYAGNI適用で不採用、reorder_point/safety_stockはW17でALTER TABLE（W14-D1深掘り課題と連動）
+
+### 53. W15: Flyway V3/V4 マイグレーション実装（items + stock_movements テーブル作成）
+
+- **日付**: 2026/04/22
+- **ファイル**: [db/migration/V3__create_items_table.sql](src/main/resources/db/migration/V3__create_items_table.sql), [db/migration/V4__create_stock_movements_table.sql](src/main/resources/db/migration/V4__create_stock_movements_table.sql)
+- **学習内容**:
+  - items テーブル作成（item_code UNIQUE + サロゲートキー分離、uom/category は enum をVARCHARで保存、created_at/updated_at に DEFAULT CURRENT_TIMESTAMP）
+  - stock_movements テーブル作成（FK item_id ON DELETE RESTRICT、CHECK (qty > 0) で多層防御、movement_date(DATE)とcreated_at(TIMESTAMP)でBusiness/System Time分離）
+  - イミュータブル設計を採用（updated_atなし）。誤入力時は打ち消し伝票＋再登録で表現する方針
+  - DEFAULT CURRENT_TIMESTAMP（INSERT時デフォルト、H2対応）と ON UPDATE CURRENT_TIMESTAMP（UPDATE時自動更新、H2非対応）の違いを理解し、updated_atはINSERT時はDBデフォルト・UPDATE時はアプリでNOW()明示の役割分担に決定
+  - 制約名は業界標準の pk_/uk_/fk_/chk_ プレフィックスで統一し、テーブル名の単複を揃える
+
+### 54. W15: SecurityConfig dev用FilterChain追加 + FlywayMigrationTest拡張（DB制約のテスト自動化）
+
+- **日付**: 2026/04/26
+- **ファイル**: [SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java), [FlywayMigrationTest.java](src/test/java/com/example/todo_api_v2/db/FlywayMigrationTest.java)
+- **学習内容**:
+  - dev環境専用のSecurityFilterChainを追加（@Profile("dev") + @Order(1)、/h2-console/**を許可、frameOptions sameOrigin、CSRF無効）。prod環境ではBean自体が生成されない二重の安全弁
+  - H2コンソール起動問題（Spring Boot 4.0.2 + H2 2.4.240の組み合わせでH2ConsoleAutoConfigurationが動作せず）を深掘り課題W15-D5に格下げし、テストコードによる代替検証へ方針転換
+  - FlywayMigrationTestを4本追加：itemsテーブル存在確認、stock_movementsテーブル存在確認、CHECK制約（qty > 0）違反確認、FK制約（不正なitem_id）違反確認
+  - JdbcTemplate + プリペアドステートメントで堅牢なテストデータ操作（item_codeでID取得しサロゲートキー依存を排除）
+  - @Transactionalでテスト独立性を確保。GUIツールに頼らずCIで自動検証可能な形に成果物を昇華
+
+### 55. W15: Item基盤実装（enum + entity + Request DTO + Mapper + Mapperテスト）
+
+- **日付**: 2026/04/27
+- **ファイル**: [UomType.java](src/main/java/com/example/todo_api_v2/entity/UomType.java), [Category.java](src/main/java/com/example/todo_api_v2/entity/Category.java), [Item.java](src/main/java/com/example/todo_api_v2/entity/Item.java), [ItemCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/ItemCreateRequest.java), [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [ItemMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java)
+- **学習内容**:
+  - UomType / Category enum を定義（単位5値・カテゴリ5値、enumをVARCHARでDBに保存する設計）
+  - Item エンティティ実装（class + Lombok @Getter/@Setter、name フィールドはDB の item_name と AS エイリアスでマッピング）
+  - ItemCreateRequest を record + Bean Validation で実装、品目マスタのバリデーションをDoD達成
+  - ItemMapper 実装（findById/findAll/insert、明示カラム指定 + AS name エイリアス + @Options で採番ID取得）
+  - ItemMapperTest 3本実装（@SpringBootTest + @Transactional、AssertJ）
+  - レイヤー別テスト戦略を整理：Service層はMockitoでユニット、Mapper層は実DBで統合、Controller層はMockMvcでスライス。テストピラミッドに沿った設計
+  - INSERT文では AS エイリアス不可（SELECT文の出力列の別名のための機能）の落とし穴を体験
+
+### 56. W15: ItemService実装＋ドメイン例外設計（多層防御の重複チェック）
+
+- **日付**: 2026/04/28
+- **ファイル**: [ItemService.java](src/main/java/com/example/todo_api_v2/service/ItemService.java), [ItemNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/ItemNotFoundException.java), [DuplicateItemCodeException.java](src/main/java/com/example/todo_api_v2/exception/DuplicateItemCodeException.java), [GlobalExceptionHandler.java](src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java), [ItemResponse.java](src/main/java/com/example/todo_api_v2/dto/ItemResponse.java), [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [ItemMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java)
+- **学習内容**:
+  - ドメイン例外2つを継承元の意味で選択（ItemNotFoundExceptionはNoSuchElementException派生、DuplicateItemCodeExceptionはIllegalStateException派生）
+  - GlobalExceptionHandlerのメッセージを動的化（ex.getMessage()）。Todo/Item/将来エンティティで共通化、IDなど動的情報も含められる
+  - ItemResponseをrecordで定義し、ItemMapperにfindByItemCodeを追加（重複チェック用）
+  - ItemServiceで多層防御の重複チェックを実装（Service層のSELECT + DB層のUNIQUE制約。SELECTとINSERTの間に競合状態の隙間があるが、DBが最終防御）
+  - createItemに@Transactionalを付与し、複数SQLの整合性を保証
+  - Optionalのメソッドは「そのメソッドが何をする時に呼ばれるか」を意識して使うべき。orElseThrowを思考停止で使って重複チェックロジックを逆向きに実装するバグを修正
+
+### 57. W15: ItemController + 全レイヤーテスト完成（DoD#1完全達成）
+
+- **日付**: 2026/05/01
+- **ファイル**: [ItemController.java](src/main/java/com/example/todo_api_v2/controller/ItemController.java), [ItemServiceTest.java](src/test/java/com/example/todo_api_v2/service/ItemServiceTest.java), [ItemControllerTest.java](src/test/java/com/example/todo_api_v2/controller/ItemControllerTest.java), [SecurityConfig.java](src/main/java/com/example/todo_api_v2/config/SecurityConfig.java)
+- **学習内容**:
+  - ItemServiceTestをMockitoで実装（5本）。Mapperを@Mockでモック化し、@InjectMocksでServiceに注入。when().thenReturn()で振る舞い定義、verify()で副作用検証
+  - 例外系テストでverify(itemMapper, never()).insert(...)を使い、「例外を投げる + 副作用が起きない」両方を保証
+  - ItemController実装（GET/{id}, GET, POST）。TodoControllerのResponseEntity<T>明示スタイル踏襲
+  - ItemControllerTestをMockMvcで実装（8本）。@WithMockUserで認証モック、HTTPステータス200/201/400/401/404/409を全方位カバー
+  - SecurityConfigの修正：authorizeHttpRequestsは同一FilterChain内で1回しか呼べないため、Item用の追加ブロックを削除。anyRequest().authenticated()でカバーされるためYAGNI原則で十分
+  - Item CRUD全レイヤー（Mapper/Service/Controller）で合計18テスト緑、テストピラミッドの完全な実装
+
+### 58. W15: StockMovementシステムの設計議論完了（DoD#2-3に向けた準備）
+
+- **日付**: 2026/05/02
+- **ファイル**: 設計議論のみ（実装は明日以降）
+- **学習内容**:
+  - エンドポイント設計：独立リソース型（POST /stock-movements）を採用、シンプルさと拡張性を重視
+  - StockMovementController を新規作成（SOLIDのS：単一責任原則）
+  - StockMovementCreateRequest にitemId/movementType/qty/movementDateを含める設計
+  - StockResponseでitemId/itemCode/name/currentStock/uomを返す（単位情報を含めることでクライアント親切設計）
+  - 現在庫はW15では全期間SUMのみ実装、過去日付スナップショットはW17に伏線として残す
+  - 「履歴は独立リソース、現在状態は属性アクセス」という設計思想を言語化
+  - 実装すべき13ファイルをリストアップ、明日からの実装フローを確定
+
+### 59. W15: StockMovementデータアクセス層完成（enum + entity + DTO + Mapper + Test）
+
+- **日付**: 2026/05/06
+- **ファイル**: [MovementType.java](src/main/java/com/example/todo_api_v2/entity/MovementType.java), [StockMovement.java](src/main/java/com/example/todo_api_v2/entity/StockMovement.java), [StockMovementCreateRequest.java](src/main/java/com/example/todo_api_v2/dto/StockMovementCreateRequest.java), [StockResponse.java](src/main/java/com/example/todo_api_v2/dto/StockResponse.java), [StockMovementMapper.java](src/main/java/com/example/todo_api_v2/mapper/StockMovementMapper.java), [StockMovementMapperTest.java](src/test/java/com/example/todo_api_v2/mapper/StockMovementMapperTest.java)
+- **学習内容**:
+  - MovementType enum（INBOUND/OUTBOUND）と StockMovement エンティティ（updated_atなしのイミュータブル設計）を実装
+  - StockMovementCreateRequest を record + Bean Validation で実装（@Digits + @Positive で DECIMAL(12,3) と CHECK制約をJava側にも反映、多層防御）
+  - StockResponse を record で実装（itemId/itemCode/name/currentStock/uom）
+  - StockMovementMapper を実装：insert と sumByItemId（COALESCE + CASE WHEN）で SUM 集計をDB側で完結
+  - SQL文字列リテラルの typo（COALSECE / INBOOUD / INBOUD / cratedBy）を順次レビューで修正、サイレントバグの危険性を実体験
+  - StockMovementMapperTest 4本（insert / SUM 0件 / SUM 入庫のみ / SUM 入出庫混在）を実装、全テスト緑
+  - BigDecimal 比較は isEqualByComparingTo を使い、スケール違いに左右されない数値比較を学んだ
+
+### 60. W15: StockMovementService完成 + ItemMapper.existsById追加（Service層完成）
+
+- **日付**: 2026/05/07
+- **ファイル**: [ItemMapper.java](src/main/java/com/example/todo_api_v2/mapper/ItemMapper.java), [StockMovementResponse.java](src/main/java/com/example/todo_api_v2/dto/StockMovementResponse.java), [StockMovementService.java](src/main/java/com/example/todo_api_v2/service/StockMovementService.java), [StockMovementServiceTest.java](src/test/java/com/example/todo_api_v2/service/StockMovementServiceTest.java)
+- **学習内容**:
+  - ItemMapper に existsById を追加。SELECT EXISTS構文で1件見つけた瞬間に終了する最速SQL（COUNT(*) > 0 との性能差を理解）
+  - StockMovementService 実装：itemMapper.existsById で存在チェック、ItemNotFoundException で一貫した例外設計、@Transactional で多層防御
+  - convertStockMovement と convertStockMovementResponse の2つのprivateヘルパーで責務分離（ItemServiceから一段進化したリファクタリング）
+  - StockMovementServiceTest を Mockito で実装（2本）。verify(never())で副作用なしを保証、createdBy = "system" の認証なし時のフォールバック動作も検証
+  - レイヤー別テスト責務分離：Service層は認証情報をモックせず、Controller層（MockMvc + @WithMockUser）で本物のusername検証を行う設計判断
+
+### 61. W15完了：StockMovementController実装と統合テスト
+
+- **日付**: 2026/05/08
+- **ファイル**: [StockMovementController.java](リンク) / [StockMovementControllerTest.java](リンク)
+- **学習内容**:
+  - `@PostMapping` + `ResponseEntity.status(HttpStatus.CREATED)` で 201 を明示的に返す（POST = リソース新規作成のHTTPセマンティクス）
+  - `@SpringBootTest` + `MockMvc` + `@WithMockUser` でControllerテストを5本実装（正常系/Bean Validation/Service層例外/未認証）
+  - `@AfterEach` のクリーンアップ順序：FK制約により子テーブル(stock_movements)を先にDELETE → 親(items) → ID RESTART
+  - JSONで `null` を表現する時は `"key": null` または **キーごと省略**。空文字 `""` は型ミスマッチでJacksonパースエラーになり、Bean Validationまで到達しない
+  - W15 DoD完全達成：在庫管理のCore機能（Item CRUD + StockMovement登録 + 在庫照会）が一通り完成
+
 ---
-Last Updated: 2026/04/19
+Last Updated: 2026/05/08
