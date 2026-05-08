@@ -6,6 +6,10 @@
         <Or>
             <Class name="com.example.todo_api_v2.controller.TodoController"/>
             <Class name="com.example.todo_api_v2.service.TodoService"/>
+            <Class name="com.example.todo_api_v2.controller.ItemController"/>
+            <Class name="com.example.todo_api_v2.service.ItemService"/>
+            <Class name="com.example.todo_api_v2.controller.StockMovementController"/>
+            <Class name="com.example.todo_api_v2.service.StockMovementService"/>
         </Or>
     </Match>
     <!-- recordのList.copyOf済みフィールドの誤検知 -->

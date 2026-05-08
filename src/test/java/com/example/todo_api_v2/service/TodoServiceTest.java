@@ -19,7 +19,6 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static com.example.todo_api_v2.entity.TodoStatus.*;
-import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;

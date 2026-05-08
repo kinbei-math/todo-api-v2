@@ -2,7 +2,6 @@ package com.example.todo_api_v2.mapper;
 
 import com.example.todo_api_v2.entity.Todo;
 import org.apache.ibatis.annotations.*;
-import org.springframework.web.service.annotation.PatchExchange;
 
 import java.util.List;
 import java.util.Optional;
