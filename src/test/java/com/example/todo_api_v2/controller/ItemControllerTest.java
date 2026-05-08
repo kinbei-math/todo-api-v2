@@ -13,6 +13,7 @@ import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
 
+
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -149,9 +150,7 @@ public class ItemControllerTest {
     }
 
 
-    @Test
-    @WithMockUser(roles = "USER")
-    @DisplayName("POST/items 異常系：重複登録")
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST/items 異常系：重複登録")
     void testCreateItem_shouldReturn409_whenItemCodeIsDuplicate() throws Exception{
         // 準備
         ItemResponse creatItem = createItemForTest("TEST-0001","test");
@@ -174,12 +173,38 @@ public class ItemControllerTest {
                         value("品目コードが既に存在します。itemCode=TEST-0001"));
     }
 
-    @Test
-    @DisplayName("GET/items 異常系：認証エラー")
+    @Test @WithMockUser(roles = "USER") @DisplayName("GET /items/{id}/stock 正常系：現在庫が取得できる")
+    void testGetCurrentStock_shouldReturn200AndStockResponse() throws Exception{
+        // 準備
+        ItemResponse created = createItemForTest("TEST-0001","test");
+
+
+        // 検証
+        mockMvc.perform(MockMvcRequestBuilders.get("/items/" + created.id() + "/stock"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemId").value(created.id()))
+                .andExpect(jsonPath("$.itemCode").value("TEST-0001"))
+                .andExpect(jsonPath("$.name").value("test"))
+                .andExpect(jsonPath("$.uom").value("PC"))
+                .andExpect(jsonPath("$.currentStock").value(0)); // 履歴なしのため
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("GET /items/{id}/stock 異常系：存在しないIDで404")
+    void testGetCurrentStock_shouldReturn404_whenIdNotExists() throws Exception{
+        // 検証
+        mockMvc.perform(MockMvcRequestBuilders.get("/items/999/stock"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("品目が見つかりません。id=999"));
+
+
+    }
+
+    @Test @DisplayName("GET/items 異常系：認証エラー")
     void testGetItem_shouldReturn401_whenNotAuthenticated() throws Exception{
         mockMvc.perform(MockMvcRequestBuilders.get("/items/1"))
                 .andExpect(status().isUnauthorized());
     }
+
 
 
     // テストデータinsert　ヘルパーメソッド

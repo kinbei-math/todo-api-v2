@@ -2,12 +2,14 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.ItemCreateRequest;
 import com.example.todo_api_v2.dto.ItemResponse;
+import com.example.todo_api_v2.dto.StockResponse;
 import com.example.todo_api_v2.entity.Category;
 import com.example.todo_api_v2.entity.Item;
 import com.example.todo_api_v2.entity.UomType;
 import com.example.todo_api_v2.exception.DuplicateItemCodeException;
 import com.example.todo_api_v2.exception.ItemNotFoundException;
 import com.example.todo_api_v2.mapper.ItemMapper;
+import com.example.todo_api_v2.mapper.StockMovementMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +30,8 @@ public class ItemServiceTest {
 
     @Mock
     ItemMapper itemMapper;
+    @Mock
+    StockMovementMapper stockMovementMapper;
     @InjectMocks
     ItemService itemService;
 
@@ -128,6 +133,42 @@ public class ItemServiceTest {
         verify(itemMapper,times(1)).findByItemCode(any(String.class));
         verify(itemMapper,never()).insert(any(Item.class));
         assertThat(exception.getMessage()).isEqualTo(DUPLICATE_MESSAGE+"TEST-0001");
+    }
+
+    @Test
+    @DisplayName("getCurrentStock：品目が存在する場合、現在庫情報が取得できる")
+    void testGetCurrentStock_shouldReturnStockResponse_whenItemExists(){
+        // Mapperの挙動
+        when(itemMapper.findById(1L)).thenReturn(
+                createTestOptionalItem(1L,"ITEM-0001","test")
+        );
+        when(stockMovementMapper.sumByItemId(1L)).thenReturn(new BigDecimal("20.000"));
+
+        // 実行
+        StockResponse response = itemService.getCurrentStock(1L);
+
+        // 検証
+        assertThat(response.itemId()).isEqualTo(1L);
+        assertThat(response.itemCode()).isEqualTo("ITEM-0001");
+        assertThat(response.name()).isEqualTo("test");
+        assertThat(response.currentStock()).isEqualByComparingTo("20.000");
+        assertThat(response.uom()).isEqualTo(UomType.PC);
+    }
+
+    @Test
+    @DisplayName("getCurrentStock：品目が存在しない場合、ItemNotFoundExceptionを投げる")
+    void testGetCurrentStock_shouldThrowItemNotFoundException_whenItemNotExists(){
+        // Mapperの挙動
+        when(itemMapper.findById(999L)).thenReturn(Optional.empty());
+
+        // 実行
+        Exception exception = assertThrows(ItemNotFoundException.class,
+                () -> itemService.getCurrentStock(999L));
+
+        // 検証
+        verify(itemMapper,times(1)).findById(999L);
+        verify(stockMovementMapper,never()).sumByItemId(999L);
+        assertThat(exception.getMessage()).isEqualTo("品目が見つかりません。id=999");
     }
 
     // Optional<Item>を作成するヘルパーメソッド

@@ -2,16 +2,19 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.ItemCreateRequest;
 import com.example.todo_api_v2.dto.ItemResponse;
+import com.example.todo_api_v2.dto.StockResponse;
 import com.example.todo_api_v2.entity.Item;
 import com.example.todo_api_v2.exception.DuplicateItemCodeException;
 import com.example.todo_api_v2.exception.ItemNotFoundException;
 import com.example.todo_api_v2.mapper.ItemMapper;
+import com.example.todo_api_v2.mapper.StockMovementMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -20,7 +23,9 @@ public class ItemService {
 
     // ItemMapperをDI
     private final ItemMapper itemMapper;
-    public ItemService(ItemMapper itemMapper){this.itemMapper = itemMapper;}
+    private final StockMovementMapper stockMovementMapper;
+    public ItemService(ItemMapper itemMapper, StockMovementMapper stockMovementMapper)
+    {this.itemMapper = itemMapper; this.stockMovementMapper = stockMovementMapper;}
 
     // 1. IDで品目を取得
     public ItemResponse findById(Long id){
@@ -64,12 +69,41 @@ public class ItemService {
         return convertItemResponse(item);
     }
 
+    // 4. 現在庫を返す
+    @Transactional
+    public StockResponse getCurrentStock(Long itemId){
+        // Itemの取得(itemIdに対しての存在確認)
+        Item item = itemMapper.findById(itemId)
+                .orElseThrow(() -> new ItemNotFoundException(
+                        "品目が見つかりません。id="+itemId
+                ));
 
-    // Responseに移し替えるメソッド
+        // 現在庫の取得
+        BigDecimal currentStock = stockMovementMapper.sumByItemId(itemId);
+
+        return convertStockResponse(item, currentStock);
+    }
+
+
+    // Responseに移し替えるメソッド 2種
     private ItemResponse convertItemResponse(Item item){
         return new ItemResponse(
-                item.getId(), item.getItemCode(), item.getName(), item.getUom(), item.getCategory(),
-                item.getCreatedAt(),item.getUpdatedAt()
+                item.getId(),
+                item.getItemCode(),
+                item.getName(),
+                item.getUom(),
+                item.getCategory(),
+                item.getCreatedAt(),
+                item.getUpdatedAt()
+        );
+    }
+    private StockResponse convertStockResponse(Item item,BigDecimal stock){
+        return new StockResponse(
+                item.getId(),
+                item.getItemCode(),
+                item.getName(),
+                stock,
+                item.getUom()
         );
     }
 
