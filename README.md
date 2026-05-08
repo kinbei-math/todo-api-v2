@@ -627,7 +627,7 @@ erDiagram
   - StockMovementServiceTest を Mockito で実装（2本）。verify(never())で副作用なしを保証、createdBy = "system" の認証なし時のフォールバック動作も検証
   - レイヤー別テスト責務分離：Service層は認証情報をモックせず、Controller層（MockMvc + @WithMockUser）で本物のusername検証を行う設計判断
 
-### N. W15完了：StockMovementController実装と統合テスト
+### 61. W15完了：StockMovementController実装と統合テスト
 
 - **日付**: 2026/05/08
 - **ファイル**: [StockMovementController.java](リンク) / [StockMovementControllerTest.java](リンク)
