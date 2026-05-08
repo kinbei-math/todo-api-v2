@@ -626,5 +626,17 @@ erDiagram
   - convertStockMovement と convertStockMovementResponse の2つのprivateヘルパーで責務分離（ItemServiceから一段進化したリファクタリング）
   - StockMovementServiceTest を Mockito で実装（2本）。verify(never())で副作用なしを保証、createdBy = "system" の認証なし時のフォールバック動作も検証
   - レイヤー別テスト責務分離：Service層は認証情報をモックせず、Controller層（MockMvc + @WithMockUser）で本物のusername検証を行う設計判断
+
+### N. W15完了：StockMovementController実装と統合テスト
+
+- **日付**: 2026/05/08
+- **ファイル**: [StockMovementController.java](リンク) / [StockMovementControllerTest.java](リンク)
+- **学習内容**:
+  - `@PostMapping` + `ResponseEntity.status(HttpStatus.CREATED)` で 201 を明示的に返す（POST = リソース新規作成のHTTPセマンティクス）
+  - `@SpringBootTest` + `MockMvc` + `@WithMockUser` でControllerテストを5本実装（正常系/Bean Validation/Service層例外/未認証）
+  - `@AfterEach` のクリーンアップ順序：FK制約により子テーブル(stock_movements)を先にDELETE → 親(items) → ID RESTART
+  - JSONで `null` を表現する時は `"key": null` または **キーごと省略**。空文字 `""` は型ミスマッチでJacksonパースエラーになり、Bean Validationまで到達しない
+  - W15 DoD完全達成：在庫管理のCore機能（Item CRUD + StockMovement登録 + 在庫照会）が一通り完成
+
 ---
-Last Updated: 2026/05/07
+Last Updated: 2026/05/08
