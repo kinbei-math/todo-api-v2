@@ -638,5 +638,20 @@ erDiagram
   - JSONで `null` を表現する時は `"key": null` または **キーごと省略**。空文字 `""` は型ミスマッチでJacksonパースエラーになり、Bean Validationまで到達しない
   - W15 DoD完全達成：在庫管理のCore機能（Item CRUD + StockMovement登録 + 在庫照会）が一通り完成
 
+### 62. W16 Step 2: 発注管理テーブル設計とFlywayマイグレーション
+
+- **日付**: 2026/05/11
+- **ファイル**:
+  - [V5__create_purchase_orders_table.sql](src/main/resources/db/migration/V5__create_purchase_orders_table.sql)
+  - [V6__create_purchase_order_lines_table.sql](src/main/resources/db/migration/V6__create_purchase_order_lines_table.sql)
+  - [V7__add_po_line_id_to_stock_movements.sql](src/main/resources/db/migration/V7__add_po_line_id_to_stock_movements.sql)
+- **学習内容**:
+  - 発注管理(purchase_orders + purchase_order_lines)の2テーブル設計を確定。明細ごとに納期(due_date)を持ち、状態遷移ORDERED⇔RECEIVEDは明細entityのみで管理(SRP)
+  - 業務コードとサロゲートキーの分離原則を採用: id(BIGINT)はDB自動採番、po_number(VARCHAR)は業務コード(PO-{yyyyMMdd}-{連番3桁})。現職での飛び番運用への違和感を原則として言語化
+  - 監査カラムを3層構造で設計: created_at/by(レコード作成) + updated_at/by(レコード更新) + received_at/by(状態遷移)。W15で確立した監査ログ原則を明細レベルで完全実装
+  - stock_movementsにpo_line_id(NULL許可FK, ON DELETE RESTRICT)を追加し、入荷伝票と発注明細を紐付け。打ち消し伝票方式(設計判断6)と整合
+  - H2/MySQL方言差への対応: AFTER構文をH2非対応のため削除、ON UPDATE CURRENT_TIMESTAMP回避でupdated_atはアプリ層更新方針、TINYINT→SMALLINTで範囲安全性確保
+  - 多層防御の徹底: DECIMAL(p,s) + CHECK > 0制約 + Java側@Digits+@Positiveの3層、UNIQUE(po_id, line_no)で同一PO内の行番号重複をDB側でも防止
+  - dev/prod両環境でFlyway V5/V6/V7マイグレーション成功確認
 ---
-Last Updated: 2026/05/08
+Last Updated: 2026/05/11
