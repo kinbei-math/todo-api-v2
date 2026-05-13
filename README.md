@@ -653,5 +653,30 @@ erDiagram
   - H2/MySQL方言差への対応: AFTER構文をH2非対応のため削除、ON UPDATE CURRENT_TIMESTAMP回避でupdated_atはアプリ層更新方針、TINYINT→SMALLINTで範囲安全性確保
   - 多層防御の徹底: DECIMAL(p,s) + CHECK > 0制約 + Java側@Digits+@Positiveの3層、UNIQUE(po_id, line_no)で同一PO内の行番号重複をDB側でも防止
   - dev/prod両環境でFlyway V5/V6/V7マイグレーション成功確認
+
+### 63. W16 Step 2修正 + Step 3前半: DB環境IaC化・enum/例外実装
+
+- **日付**: 2026/05/13
+- **ファイル**:
+  - [V5__create_purchase_orders_table.sql](src/main/resources/db/migration/V5__create_purchase_orders_table.sql)
+  - [V6__create_purchase_order_lines_table.sql](src/main/resources/db/migration/V6__create_purchase_order_lines_table.sql)
+  - [docker-compose.yml](docker-compose.yml)
+  - [run-prod.ps1](run-prod.ps1)
+  - [PoStatus.java](src/main/java/com/example/todo_api_v2/entity/PoStatus.java)
+  - [PoLineStatus.java](src/main/java/com/example/todo_api_v2/entity/PoLineStatus.java)
+  - [PurchaseOrderNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/PurchaseOrderNotFoundException.java)
+  - [PurchaseOrderLineNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/PurchaseOrderLineNotFoundException.java)
+- **学習内容**:
+  - V6修正: received_atをTIMESTAMP→DATE型に変更(納品日はBusiness Time扱いに統一、設計判断60との整合性確保)
+  - V5修正: updated_byカラム追加(ヘッダもrefreshStatusで更新されるため監査原則を一貫適用)
+  - MySQL環境をdocker-compose管理に移行(W14の手動docker run運用から脱却、IaC化)
+  - 環境変数を.env/.env.exampleで外部注入、Spring Boot側はDB_URL/DB_USERNAME/DB_PASSWORDで受け取り
+  - PowerShell起動スクリプトrun-prod.ps1作成(.env読み込み+bootRun起動を自動化)
+  - W14手動コンテナとの名前衝突を経験(docker rmで旧コンテナ削除、IaC移行時の典型的事故)
+  - W16 Step 3 設計: PoStatusとPoLineStatusに分離(状態遷移ロジックは明細にしか必要ないためSRPで分離、将来PARTIAL_RECEIVEDに備えた拡張性も確保)
+  - canTransitionTo()はswitch式で各遷移を明示するパターン2を採用、戻り値はプリミティブboolean
+  - PurchaseOrder/PurchaseOrderLineの状態遷移メソッド設計: markAsReceived/cancelReceivingの引数にoperator/updatedAtを明示的に渡す方針(Service層が時刻決定権を持つ、テスタビリティ確保)
+  - ドメイン例外2つ作成: 既存ItemNotFoundExceptionと同パターン(NoSuchElementException継承、メッセージ文字列を受け取るコンストラクタ)
+  - 入荷取消時のreceived_*クリアは設計判断83(打ち消し伝票方式)と矛盾しない(履歴はstock_movementsのOUTBOUND伝票で残るため監査追跡可能)
 ---
-Last Updated: 2026/05/11
+Last Updated: 2026/05/13
