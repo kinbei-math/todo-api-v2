@@ -678,5 +678,17 @@ erDiagram
   - PurchaseOrder/PurchaseOrderLineの状態遷移メソッド設計: markAsReceived/cancelReceivingの引数にoperator/updatedAtを明示的に渡す方針(Service層が時刻決定権を持つ、テスタビリティ確保)
   - ドメイン例外2つ作成: 既存ItemNotFoundExceptionと同パターン(NoSuchElementException継承、メッセージ文字列を受け取るコンストラクタ)
   - 入荷取消時のreceived_*クリアは設計判断83(打ち消し伝票方式)と矛盾しない(履歴はstock_movementsのOUTBOUND伝票で残るため監査追跡可能)
+
+### 64. W16 Step 3 後半: 発注 Entity 実装（PurchaseOrder / PurchaseOrderLine）
+
+- **日付**: 2026/05/15
+- **ファイル**:
+  - [EmptyPurchaseOrderLineException.java](src/main/java/com/example/todo_api_v2/exception/EmptyPurchaseOrderLineException.java)
+  - [PurchaseOrder.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrder.java)
+  - [PurchaseOrderLine.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrderLine.java)
+- **学習内容**:
+  - 発注ヘッダ・明細の Entity を実装。状態遷移ロジックを Entity に集約し、`@Setter` 禁止 + final フィールドでイミュータブル設計を強化
+  - ガード節パターン（チェックを先頭、更新は後）で Entity の中途半端な状態を構造的に防ぐ設計を採用
+  - `@Transactional` は DB レコードのロールバック専用、Java オブジェクトには効かないという誤解の解消
 ---
-Last Updated: 2026/05/13
+Last Updated: 2026/05/15
