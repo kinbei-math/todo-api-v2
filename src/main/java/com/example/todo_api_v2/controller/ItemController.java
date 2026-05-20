@@ -1,8 +1,8 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.ItemCreateRequest;
-import com.example.todo_api_v2.dto.ItemResponse;
-import com.example.todo_api_v2.dto.StockResponse;
+import com.example.todo_api_v2.dto.item.ItemCreateRequest;
+import com.example.todo_api_v2.dto.item.ItemResponse;
+import com.example.todo_api_v2.dto.stock.StockResponse;
 import com.example.todo_api_v2.service.ItemService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

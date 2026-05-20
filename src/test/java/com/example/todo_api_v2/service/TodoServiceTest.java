@@ -1,9 +1,9 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.TodoCreateRequest;
-import com.example.todo_api_v2.dto.TodoResponse;
-import com.example.todo_api_v2.dto.TodoStatusUpdateRequest;
-import com.example.todo_api_v2.dto.TodoUpdateRequest;
+import com.example.todo_api_v2.dto.todo.TodoCreateRequest;
+import com.example.todo_api_v2.dto.todo.TodoResponse;
+import com.example.todo_api_v2.dto.todo.TodoStatusUpdateRequest;
+import com.example.todo_api_v2.dto.todo.TodoUpdateRequest;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.exception.InvalidStatusTransitionException;
 import com.example.todo_api_v2.mapper.TodoMapper;
