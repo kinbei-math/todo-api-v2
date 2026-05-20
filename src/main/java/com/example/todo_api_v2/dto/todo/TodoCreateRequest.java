@@ -1,4 +1,4 @@
-package com.example.todo_api_v2.dto;
+package com.example.todo_api_v2.dto.todo;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

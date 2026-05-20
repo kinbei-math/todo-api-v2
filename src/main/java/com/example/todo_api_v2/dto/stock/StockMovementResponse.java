@@ -1,4 +1,4 @@
-package com.example.todo_api_v2.dto;
+package com.example.todo_api_v2.dto.stock;
 
 import com.example.todo_api_v2.entity.MovementType;
 
