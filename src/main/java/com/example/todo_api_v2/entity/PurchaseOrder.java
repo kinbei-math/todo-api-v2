@@ -3,16 +3,30 @@ package com.example.todo_api_v2.entity;
 import com.example.todo_api_v2.exception.EmptyPurchaseOrderLineException;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * 発注ヘッダ
+ * <p>
+ * 業務上の「発注書1枚」と同じ意味をもつ。複数の明細行を持つ。
+ * 明細は {@link PurchaseOrderLine} を参照。
+ * <p>
+ * 不変フィールド: id, poNumber, supplier, orderDate, createdBy, createdAt
+ * <br>
+ * 可変フィールド: status, updatedBy, updatedAt（refreshStatus経由でのみ更新）
+ *
+ */
 @AllArgsConstructor
 @Getter
 public class PurchaseOrder {
     private final Long          id;         // id(PK) DBで自動採番
     private final String        poNumber;   // 発注番号(UK) 20文字以内
     private final String        supplier;   // 仕入れ先 100字以内
+    private final LocalDate     orderDate;  // 発注日
     private       PoStatus      status;     // 注文状態
     private final LocalDateTime createdAt;  // 作成時間(DB自動)
     private final String        createdBy;  // 作成者 255字以内
