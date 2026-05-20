@@ -17,4 +17,9 @@
         <Bug pattern="EI_EXPOSE_REP"/>
         <Class name="com.example.todo_api_v2.dto.todo.TodoBulkStatusUpdateRequest"/>
     </Match>
+    <!-- テキストブロック + .formatted() の誤検知（テストクラスのみ許容） -->
+    <Match>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+        <Class name="~com\.example\.todo_api_v2\..*Test"/>
+    </Match>
 </FindBugsFilter>
