@@ -690,5 +690,31 @@ erDiagram
   - 発注ヘッダ・明細の Entity を実装。状態遷移ロジックを Entity に集約し、`@Setter` 禁止 + final フィールドでイミュータブル設計を強化
   - ガード節パターン（チェックを先頭、更新は後）で Entity の中途半端な状態を構造的に防ぐ設計を採用
   - `@Transactional` は DB レコードのロールバック専用、Java オブジェクトには効かないという誤解の解消
+
+### 65. W16 Step4準備：DTO設計確定とリファクタ・環境整備
+
+- **日付**: 2026/05/20
+- **ファイル**: [V8__add_order_date_to_purchase_orders.sql](src/main/resources/db/migration/V8__add_order_date_to_purchase_orders.sql) / [PurchaseOrder.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrder.java)
+- **学習内容**:
+  - W16 Step4-A：発注・入荷関連の5つのDTO（record方式）のフィールド・Validation方針を確定
+  - DTOディレクトリをドメインごとにサブパッケージ分割（common/item/stock/todo/purchaseorder）
+  - V8マイグレーションでpurchase_ordersにorder_dateカラムを追加（dev/prod両環境で適用確認）
+  - PurchaseOrder Entityにorder_dateフィールドとクラスJavadocを追加
+  - リクエストDTOはマスアサインメント対策で「クライアントが決める情報のみ」に絞る設計を採用
+  - `@Digits(integer, fraction)`とSQLの`DECIMAL(p, s)`の桁数対応を整理（integer = p - s）
+  - SpotBugsテストコード警告18件を解消（テキストブロック誤検知はexclude設定、未使用変数は削除）
+  - Step1リファクタの取りこぼし（import文未コミット）を発見し後追い修正、`git status`でのclean確認を習慣化
+
+### 66. W16 Step4：発注・入荷DTOの実装とEntityテスト
+
+- **日付**: 2026/05/21
+- **ファイル**: [dto/purchaseorder/](src/main/java/com/example/todo_api_v2/dto/purchaseorder/) / [PurchaseOrderLineTest.java](src/test/java/com/example/todo_api_v2/entity/PurchaseOrderLineTest.java) / [PurchaseOrderTest.java](src/test/java/com/example/todo_api_v2/entity/PurchaseOrderTest.java)
+- **学習内容**:
+  - 発注・入荷関連の5つのDTO（record方式）を実装。リクエストはBean Validation、レスポンスはValidationなし
+  - Listを持つrecordにコンパクトコンストラクタ＋List.copyOfで防御的コピーを実装（浅い不変の対策）
+  - SpotBugsのEI_EXPOSE_REP/REP2を理解し、誤検知（返却側）はexclude.xmlに明示列挙で対処
+  - PurchaseOrderLineTest（5ケース）：markAsReceived/cancelReceivingの状態遷移と例外時の状態不変を検証
+  - PurchaseOrderTest（6ケース）：refreshStatusの全分岐（null/空/状態変化あり・なし）を網羅
+  - Entityメソッドのnullチェックは「発生源と責務」で判断する多層防御の線引きを学習
 ---
-Last Updated: 2026/05/15
+Last Updated: 2026/05/21
