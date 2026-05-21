@@ -15,7 +15,11 @@
     <!-- recordのList.copyOf済みフィールドの誤検知 -->
     <Match>
         <Bug pattern="EI_EXPOSE_REP"/>
-        <Class name="com.example.todo_api_v2.dto.todo.TodoBulkStatusUpdateRequest"/>
+        <Or>
+            <Class name="com.example.todo_api_v2.dto.todo.TodoBulkStatusUpdateRequest"/>
+            <Class name="com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderCreateRequest"/>
+            <Class name="com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderResponse"/>
+        </Or>
     </Match>
     <!-- テキストブロック + .formatted() の誤検知（テストクラスのみ許容） -->
     <Match>
