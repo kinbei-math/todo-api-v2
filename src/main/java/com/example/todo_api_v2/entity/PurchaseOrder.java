@@ -1,7 +1,6 @@
 package com.example.todo_api_v2.entity;
 
 import com.example.todo_api_v2.exception.EmptyPurchaseOrderLineException;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -15,23 +14,60 @@ import java.util.Objects;
  * 業務上の「発注書1枚」と同じ意味をもつ。複数の明細行を持つ。
  * 明細は {@link PurchaseOrderLine} を参照。
  * <p>
- * 不変フィールド: id, poNumber, supplier, orderDate, createdBy, createdAt
+ * 不変フィールド: poNumber, supplier, orderDate, createdBy
  * <br>
- * 可変フィールド: status, updatedBy, updatedAt（refreshStatus経由でのみ更新）
- *
+ * 可変フィールド: status(初期値はORDERED), updatedBy, updatedAt（refreshStatus経由でのみ更新）
+ * <br>
+ * DBが決めるフィールド(new時点で未確定、finalをつけない): id, createdAt
  */
-@AllArgsConstructor
 @Getter
 public class PurchaseOrder {
-    private final Long          id;         // id(PK) DBで自動採番
+    private Long                id;         // id(PK) DBで自動採番
     private final String        poNumber;   // 発注番号(UK) 20文字以内
     private final String        supplier;   // 仕入れ先 100字以内
     private final LocalDate     orderDate;  // 発注日
     private       PoStatus      status;     // 注文状態
-    private final LocalDateTime createdAt;  // 作成時間(DB自動)
+    private       LocalDateTime createdAt;  // 作成時間(DB自動)
     private final String        createdBy;  // 作成者 255字以内
     private       LocalDateTime updatedAt;  // 更新時刻　初期値は作成時間と等しい(Service層で更新)
     private       String        updatedBy;  // 更新者 255字以内
+
+
+    /**
+     * 新規作成(Service層)用のコンストラクタ(staticファクトリメソッドで使用)
+     */
+    private PurchaseOrder(String poNumber, String supplier, LocalDate orderDate, String createdBy){
+        this.poNumber  = poNumber;
+        this.supplier  = supplier;
+        this.orderDate = orderDate;
+        this.status    = PoStatus.ORDERED;
+        this.createdBy = createdBy;
+        this.updatedBy = createdBy;
+    }
+
+    /**
+     * DBから注入用のコンストラクタ(DBが使用するのでpublic)
+     */
+    public PurchaseOrder(Long id, String poNumber, String supplier, LocalDate orderDate, PoStatus status, LocalDateTime createdAt, String createdBy, LocalDateTime updatedAt, String updatedBy) {
+        this.id = id;
+        this.poNumber = poNumber;
+        this.supplier = supplier;
+        this.orderDate = orderDate;
+        this.status = status;
+        this.createdAt = createdAt;
+        this.createdBy = createdBy;
+        this.updatedAt = updatedAt;
+        this.updatedBy = updatedBy;
+    }
+
+    /**
+     * 新規作成用のstaticファクトリメソッド
+     * <p>
+     * Service層で使用
+     */
+    public static PurchaseOrder createNew(String poNumber, String supplier, LocalDate orderDate, String createdBy){
+        return new PurchaseOrder(poNumber, supplier, orderDate, createdBy);
+    }
 
     /**
      * 明細リストから発注ヘッダのステータスを再計算して反映する。

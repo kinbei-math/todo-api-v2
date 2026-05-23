@@ -2,17 +2,27 @@ package com.example.todo_api_v2.entity;
 
 
 import com.example.todo_api_v2.exception.InvalidStatusTransitionException;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
+
+/**
+ * 発注明細
+ * <p>
+ * 発注の明細1行ずつに相当
+ * <p>
+ * 不変フィールド（Serviceが生成時に決め、以後変わらない／final）: poId, itemId, lineNo, qty, price, dueDate, createdBy
+ * <br>
+ * 可変フィールド（状態遷移で変わる）: status, receivedBy, receivedAt, updatedBy, updatedAt
+ * <br>
+ * DBが決めるフィールド（new時点で未確定／final外す）: id, createdAt
+ */
 @Getter
 public class PurchaseOrderLine {
-    private final Long          id;         // id(PK) DBで自動採番
+    private       Long          id;         // id(PK) DBで自動採番
     private final Long          poId;       // FK(PurchaseOrder)
     private final Long          itemId;     // FK(items)
     private final Integer       lineNo;     // 行番号(MyBatisとの相性でnull検知できるIntegerを採用)
@@ -23,10 +33,53 @@ public class PurchaseOrderLine {
     private       String        receivedBy; // receivedへの変更者
     private       LocalDate     receivedAt; // 納品日(Business Time)
     private final String        createdBy;  // 明細作成者
-    private final LocalDateTime createdAt;  // 明細作成時間(System Time)
+    private       LocalDateTime createdAt;  // 明細作成時間(System Time)
     private       String        updatedBy;  // 更新者
     private       LocalDateTime updatedAt;  // 更新時間(System Time)
 
+    /**
+     * DBから注入用のコンストラクタ
+     */
+    public PurchaseOrderLine(Long id, Long poId, Long itemId, Integer lineNo, BigDecimal qty, BigDecimal price, LocalDate dueDate, PoLineStatus status, String receivedBy, LocalDate receivedAt, String createdBy, LocalDateTime createdAt, String updatedBy, LocalDateTime updatedAt) {
+        this.id = id;
+        this.poId = poId;
+        this.itemId = itemId;
+        this.lineNo = lineNo;
+        this.qty = qty;
+        this.price = price;
+        this.dueDate = dueDate;
+        this.status = status;
+        this.receivedBy = receivedBy;
+        this.receivedAt = receivedAt;
+        this.createdBy = createdBy;
+        this.createdAt = createdAt;
+        this.updatedBy = updatedBy;
+        this.updatedAt = updatedAt;
+    }
+
+    /**
+     * 新規作成用のコンストラクタ(staticファクトリメソッドで使用)
+     */
+    private PurchaseOrderLine(Long poId, Long itemId, Integer lineNo, BigDecimal qty, BigDecimal price, LocalDate dueDate, String createdBy){
+        this.poId      = poId;
+        this.itemId    = itemId;
+        this.lineNo    = lineNo;
+        this.qty       = qty;
+        this.price     = price;
+        this.dueDate   = dueDate;
+        this.status    = PoLineStatus.ORDERED;
+        this.createdBy = createdBy;
+        this.updatedBy = createdBy;
+    }
+
+    /**
+     * 新規作成用のstaticファクトリメソッド
+     * <p>
+     * Service層で使用
+     */
+    public static PurchaseOrderLine createNew(Long poId, Long itemId, Integer lineNo, BigDecimal qty, BigDecimal price, LocalDate dueDate, String createdBy){
+        return new PurchaseOrderLine(poId, itemId, lineNo, qty, price, dueDate, createdBy);
+    }
 
     /**
      * 明細をORDERED→RECEIVED(入荷済み)へと変更する入荷登録メソッド
