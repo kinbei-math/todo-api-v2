@@ -716,5 +716,17 @@ erDiagram
   - PurchaseOrderLineTest（5ケース）：markAsReceived/cancelReceivingの状態遷移と例外時の状態不変を検証
   - PurchaseOrderTest（6ケース）：refreshStatusの全分岐（null/空/状態変化あり・なし）を網羅
   - Entityメソッドのnullチェックは「発生源と責務」で判断する多層防御の線引きを学習
+
+### 67. W16 Step 5-A：Mapperインターフェース設計（PurchaseOrder系）
+
+- **日付**: 2026/05/22
+- **ファイル**: コード変更なし（設計判断のみ。実装は明日 feature/w16-purchase-order で着手）
+- **学習内容**:
+  - PurchaseOrder系Mapperを `PurchaseOrderMapper`（ヘッダ＝集約ルート）と `PurchaseOrderLineMapper`（明細）の2つに分割する設計を確定。根拠は「ヘッダ単独・明細単独で動かす操作が現実に存在する＝操作の粒度が分かれる」こと
+  - 「依存」には参照の依存（Item↔StockMovement：片方向・対等な別実体）と構成の依存（PurchaseOrder↔PurchaseOrderLine：両方向・部品＝集約）の2種類があると整理
+  - 両Mapperのメソッド一覧（計8個）を確定。明細UPDATEの命名を `updatePoLineStatus` → `updateReceipt` / `updateReceiptCancellation` に修正（`update`の後ろは名詞、というルールを確立）
+  - INSERTは「1メソッド＝1SQL＝1テーブル」「po_idはヘッダINSERT後にしか確定しない」ため2メソッドに分割。順番制御はService層の責務
+  - `useGeneratedKeys` の挙動（呼び出し側インスタンスのidフィールドがリフレクションで書き換わる）を整理
+  - `PurchaseOrder` Entityの `id` に `final` が付いている設計ミスを発見。採番フィールドは不変ではないため `final` を外し、`@AllArgsConstructor` をコンストラクタ2本（新規作成用／DB復元用）に置き換える方針を確定
 ---
-Last Updated: 2026/05/21
+Last Updated: 2026/05/22
