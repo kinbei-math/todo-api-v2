@@ -728,5 +728,26 @@ erDiagram
   - INSERTは「1メソッド＝1SQL＝1テーブル」「po_idはヘッダINSERT後にしか確定しない」ため2メソッドに分割。順番制御はService層の責務
   - `useGeneratedKeys` の挙動（呼び出し側インスタンスのidフィールドがリフレクションで書き換わる）を整理
   - `PurchaseOrder` Entityの `id` に `final` が付いている設計ミスを発見。採番フィールドは不変ではないため `final` を外し、`@AllArgsConstructor` をコンストラクタ2本（新規作成用／DB復元用）に置き換える方針を確定
+
+### 68. W16 Step 5-A：Entity修正・Mapperインターフェース設計
+
+- **日付**: 2026/05/23
+- **ファイル**: PurchaseOrder.java / PurchaseOrderLine.java / PurchaseOrderMapper.java / PurchaseOrderLineMapper.java / application.yml
+- **学習内容**:
+  - Entity の `id` / `createdAt` から `final` を外し、「DBが決めるフィールド」という第3グループとして整理。`final` は「生成後ずっと不変」の約束なので、INSERT後に値が確定するフィールドに付けると宣言が嘘になる
+  - `@AllArgsConstructor` を廃止し、新規作成用 `private` コンストラクタ＋DB復元用 `public` コンストラクタの2本に。新規作成は static ファクトリメソッド `createNew()` を唯一の入口とし、コンストラクタを `private` に隠して裏口を塞いだ
+  - `PurchaseOrder` Entity は `lines`（明細リスト）フィールドを持たない判断。ヘッダの責務は「明細の所有」でなく「明細を受け取って状態を計算すること」。フィールドに持つと真実の源が二重化する
+  - `PurchaseOrderMapper` / `PurchaseOrderLineMapper` インターフェース計8メソッドを作成。`application.yml` に `mybatis.mapper-locations` を追加
+
+### 69. W16 Step 5-B：Mapper XML実装
+
+- **日付**: 2026/05/23
+- **ファイル**: PurchaseOrderMapper.xml / PurchaseOrderLineMapper.xml
+- **学習内容**:
+  - `PurchaseOrderMapper.xml`（insert / findAll / findById / updatePoStatus）と `PurchaseOrderLineMapper.xml`（insertLines / findByPoId / updateReceipt / updateReceiptCancellation）の計8メソッドのSQLを実装
+  - `<resultMap><constructor>` 方式で、`@Setter` を持たない不変EntityのDB復元用コンストラクタを呼ぶマッピングを実装（判断93の新標準）。`<idArg>`＋`<arg>` をコンストラクタ引数順に並べ、`javaType` は引数の型と完全一致させる
+  - `<foreach>` で明細の bulk INSERT を実装。`collection="list"`、`item="line"`、`separator=","` で `( ... ), ( ... )` を生成
+  - `updateReceipt` / `updateReceiptCancellation` は SQL が同一でも「偶然の重複」と判断し、2メソッドのまま分割を維持
+  - ハマり：空の Mapper XML ファイルを `mapper/` に置くと `SAXParseException` で起動失敗。XMLは中身を書き終えてからフォルダに置く
 ---
-Last Updated: 2026/05/22
+Last Updated: 2026/05/23
