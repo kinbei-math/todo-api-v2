@@ -22,57 +22,57 @@
     <!-- @Options の内容も、タグの属性としてそのまま書きます -->
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO purchase_orders (
-        po_number,
-        supplier,
-        order_date,
-        status,
-        created_by,
-        updated_by
+            po_number,
+            supplier,
+            order_date,
+            status,
+            created_by,
+            updated_by
         ) VALUES (
-        #{poNumber},
-        #{supplier},
-        #{orderDate},
-        #{status},
-        #{createdBy},
-        #{updatedBy}
+            #{poNumber},
+            #{supplier},
+            #{orderDate},
+            #{status},
+            #{createdBy},
+            #{updatedBy}
         )
     </insert>
 
     <select id="findAll" resultMap="purchaseOrderResultMap">
         SELECT
-        id,
-        po_number,
-        supplier,
-        order_date,
-        status,
-        created_at,
-        created_by,
-        updated_at,
-        updated_by
+            id,
+            po_number,
+            supplier,
+            order_date,
+            status,
+            created_at,
+            created_by,
+            updated_at,
+            updated_by
         FROM purchase_orders
         ORDER BY id
     </select>
 
     <select id="findById" resultMap="purchaseOrderResultMap">
         SELECT
-        id,
-        po_number,
-        supplier,
-        order_date,
-        status,
-        created_at,
-        created_by,
-        updated_at,
-        updated_by
+            id,
+            po_number,
+            supplier,
+            order_date,
+            status,
+            created_at,
+            created_by,
+            updated_at,
+            updated_by
         FROM purchase_orders
         WHERE id = #{id}
     </select>
 
     <update id="updatePoStatus">
         UPDATE purchase_orders SET
-        status     = #{status},
-        updated_at = #{updatedAt},
-        updated_by = #{updatedBy}
+            status     = #{status},
+            updated_at = #{updatedAt},
+            updated_by = #{updatedBy}
         WHERE id = #{id}
     </update>
 
