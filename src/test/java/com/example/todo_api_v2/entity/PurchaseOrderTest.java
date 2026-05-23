@@ -15,7 +15,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 public class PurchaseOrderTest {
     private static final LocalDateTime CREATED_AT  = LocalDateTime.of(2026, 5, 1, 9, 0);
     private static final LocalDate     ORDER_DATE  = LocalDate.of(2026, 5, 1);
-    private static final LocalDate     RECEIVED_AT = LocalDate.of(2026,5,31);
     private static final LocalDateTime UPDATED_AT  = LocalDateTime.of(2026,5,31,12,0);
 
 
