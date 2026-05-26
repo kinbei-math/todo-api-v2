@@ -749,5 +749,18 @@ erDiagram
   - `<foreach>` で明細の bulk INSERT を実装。`collection="list"`、`item="line"`、`separator=","` で `( ... ), ( ... )` を生成
   - `updateReceipt` / `updateReceiptCancellation` は SQL が同一でも「偶然の重複」と判断し、2メソッドのまま分割を維持
   - ハマり：空の Mapper XML ファイルを `mapper/` に置くと `SAXParseException` で起動失敗。XMLは中身を書き終えてからフォルダに置く
+
+### 70. W16 Step 5-C：Mapper統合テスト（MapperTest）
+
+- **日付**: 2026/05/24
+- **ファイル**: PurchaseOrderMapperTest.java / PurchaseOrderLineMapperTest.java
+- **学習内容**:
+  - `PurchaseOrderMapperTest`（5メソッド）と `PurchaseOrderLineMapperTest`（7メソッド）を作成し、Mapper 8メソッドがH2で正しく動くことを統合テストで実証。`<resultMap><constructor>`・`useGeneratedKeys`・`<foreach>` のbulk INSERTが、起動成功では保証されなかったレベルで裏付けられた
+  - テスト方式は `@SpringBootTest` + `@Transactional`。既存 `StockMovementMapperTest` の型に揃え、Strangler Fig の精神で新規テストも既存作法に合わせた
+  - Mapperテストは「書き込み」と「読み出し」がペアで初めて検証が閉じる。`insertLines` の検証に `findByPoId` を道具として使う ──「2メソッドが絡む」のは設計ミスでなくMapperテストの正しい姿。テストメソッドは「主役（本命で検証したいメソッド）」で分ける
+  - 検証していないフィールドはミスがあっても見つからない。`assertPoLine` から `dueDate` が抜けても緑のまま素通りする。INSERTした全14フィールドを照合対象にし、`hasSize` で件数を固定して「余計なものが混ざっていない」を保証する
+  - `BigDecimal` の比較は `isEqualByComparingTo`。`equals()` はスケール差（`10` と `10.000`）で不一致になるため、DBから読み戻した値の照合では `compareTo` ベースの比較を使う
+  - 期待値は「INSERTした本人オブジェクト」を使い、リテラルのハードコード重複を排除。検証は順序非依存に（`stream().filter` で id 一致要素を探す）
+  - ハマり：`findAll` テストで `List` のインデックスを `get(1)/(2)/(3)` と1ずれで書いていた（0始まりなので `get(0)/(1)/(2)`）
 ---
-Last Updated: 2026/05/23
+Last Updated: 2026/05/26
