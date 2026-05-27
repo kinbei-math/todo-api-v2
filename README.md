@@ -762,5 +762,17 @@ erDiagram
   - `BigDecimal` の比較は `isEqualByComparingTo`。`equals()` はスケール差（`10` と `10.000`）で不一致になるため、DBから読み戻した値の照合では `compareTo` ベースの比較を使う
   - 期待値は「INSERTした本人オブジェクト」を使い、リテラルのハードコード重複を排除。検証は順序非依存に（`stream().filter` で id 一致要素を探す）
   - ハマり：`findAll` テストで `List` のインデックスを `get(1)/(2)/(3)` と1ずれで書いていた（0始まりなので `get(0)/(1)/(2)`）
+
+### 71. W16 Step 6（前半）：発注作成のService層を実装
+
+- **日付**: 2026/05/27
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 発注作成 `create` を実装。DTO→Entity変換、ヘッダINSERT、UK重複の例外詰め替え、`useGeneratedKeys` でのpoId取得、lineNo採番、明細bulkInsert、レスポンス組み立ての一連を完成
+  - UK重複は事前SELECTせず、INSERT時の `DuplicateKeyException` を捕捉して業務例外 `DuplicatePoNumberException` に詰め替える方針を採用（事前SELECTはレースコンディションに弱い）
+  - 例外詰め替え時は元例外を cause として繋ぐ（`super(message, cause)`）。スタックトレースを切らさない
+  - DB自動採番のcreatedAt/updatedAtはINSERT後にJava側Entityへ書き戻らないため、INSERT後に再SELECTしてレスポンスに正しい値を載せる方式に修正
+  - `assembleResponse` をMapper非依存の純粋な変換ヘルパーに切り出し、SELECT・存在チェックは呼び出し側の責務に分離
+  - ヘッダ不在時の例外型を文脈で分離（`create`=`IllegalStateException` / 詳細取得=`PurchaseOrderNotFoundException`）
 ---
-Last Updated: 2026/05/26
+Last Updated: 2026/05/27
