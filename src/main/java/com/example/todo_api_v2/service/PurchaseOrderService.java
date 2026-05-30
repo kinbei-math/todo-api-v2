@@ -6,6 +6,7 @@ import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderResponse;
 import com.example.todo_api_v2.entity.PurchaseOrder;
 import com.example.todo_api_v2.entity.PurchaseOrderLine;
 import com.example.todo_api_v2.exception.DuplicatePoNumberException;
+import com.example.todo_api_v2.exception.PurchaseOrderNotFoundException;
 import com.example.todo_api_v2.mapper.PurchaseOrderLineMapper;
 import com.example.todo_api_v2.mapper.PurchaseOrderMapper;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,23 @@ public class PurchaseOrderService {
                 new IllegalStateException("INSERT直後の発注ヘッダがDBに存在しません。poId="+ newPoId));
         List<PurchaseOrderLine> poLines = purchaseOrderLineMapper.findByPoId(newPoId);
 
+        return assembleResponse(po, poLines);
+    }
+
+    /**
+     * IDから発注ヘッダを検索。発注ヘッダと明細リストを返す
+     *
+     * @param id 発注ヘッダのid(PK)
+     * @return PurchaseOrderResponse
+     * @throws PurchaseOrderNotFoundException 指定したidの発注ヘッダが存在しない場合
+     */
+    public PurchaseOrderResponse findById(Long id){
+        // DBから取得
+        PurchaseOrder po = purchaseOrderMapper.findById(id).orElseThrow(()->
+                new PurchaseOrderNotFoundException("発注ヘッダがDBに存在しません。poId="+ id));
+        List<PurchaseOrderLine> poLines = purchaseOrderLineMapper.findByPoId(id);
+
+        // response作成
         return assembleResponse(po, poLines);
     }
 
