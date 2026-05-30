@@ -774,5 +774,15 @@ erDiagram
   - DB自動採番のcreatedAt/updatedAtはINSERT後にJava側Entityへ書き戻らないため、INSERT後に再SELECTしてレスポンスに正しい値を載せる方式に修正
   - `assembleResponse` をMapper非依存の純粋な変換ヘルパーに切り出し、SELECT・存在チェックは呼び出し側の責務に分離
   - ヘッダ不在時の例外型を文脈で分離（`create`=`IllegalStateException` / 詳細取得=`PurchaseOrderNotFoundException`）
+
+### 72. W16 Step 6（後半）：発注詳細取得をService層に実装
+
+- **日付**: 2026/05/29
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 詳細取得 `findById(Long id)` を実装。`findById` でヘッダ取得→`orElseThrow(PurchaseOrderNotFoundException)`、`findByPoId` で明細取得、`assembleResponse` で組み立て
+  - 読み取り操作は整合性検証をせず、DBの状態をありのまま返す設計を確認。明細0件チェックは書き込み側（create=`@NotEmpty`、入荷処理=`EmptyPurchaseOrderLineException`）の責務であり、読み取り側ではチェックしない
+  - `create` の後半と詳細取得は `orElseThrow` の例外型だけが違う（500 vs 404）。共通部分は `assembleResponse` のみ共有し、メソッドは別に保つ
+  - 未使用の例外クラス `PurchaseOrderLineNotFoundException`（デッドコード）を `Select-String` で確認のうえ削除（`refactor:` で単独コミット）
 ---
-Last Updated: 2026/05/27
+Last Updated: 2026/05/30
