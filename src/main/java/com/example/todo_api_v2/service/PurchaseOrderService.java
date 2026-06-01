@@ -86,6 +86,17 @@ public class PurchaseOrderService {
     }
 
     /**
+     * 発注ヘッダ+明細リストの組合せを全件返す
+     *
+     * @return List<PurchaseOrderResponse>
+     */
+    public List<PurchaseOrderResponse> findAll(){
+        return purchaseOrderMapper.findAll().stream()
+                .map( po-> assembleResponse(po, purchaseOrderLineMapper.findByPoId(po.getId()))
+                ).toList();
+    }// N+1だが発注件数が少ないため許容（実データでスロークエリが出たらIN句/JOINで最適化）
+
+    /**
      * DTOをPurchaseOrderに詰めなおすヘルパーメソッド
      *
      * @param request DTO
