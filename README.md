@@ -784,5 +784,15 @@ erDiagram
   - 読み取り操作は整合性検証をせず、DBの状態をありのまま返す設計を確認。明細0件チェックは書き込み側（create=`@NotEmpty`、入荷処理=`EmptyPurchaseOrderLineException`）の責務であり、読み取り側ではチェックしない
   - `create` の後半と詳細取得は `orElseThrow` の例外型だけが違う（500 vs 404）。共通部分は `assembleResponse` のみ共有し、メソッドは別に保つ
   - 未使用の例外クラス `PurchaseOrderLineNotFoundException`（デッドコード）を `Select-String` で確認のうえ削除（`refactor:` で単独コミット）
+
+### 73. W16 Step 6（後半）：発注一覧取得の実装とServiceテスト着手
+
+- **日付**: 2026/06/01
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 一覧取得 `findAll()` を実装。ヘッダ全件取得 → 各ヘッダに `findByPoId` で明細をぶら下げ `assembleResponse` で変換、Streamで記述
+  - N+1問題（ヘッダN件に対し明細SELECTがN回）を認識した上で、YAGNIに基づき今は許容。コメントで意図を明記（実データでスロークエリが出たらIN句/JOINで最適化）
+  - `PurchaseOrderServiceTest` を作成。判断36（Entityは本物、Mapperはモック＝Sociable Unit Test）に沿い、2つのMapperを `@Mock`、`PurchaseOrderService` を `@InjectMocks`
+  - findById 正常系テストを実装。全フィールドを検証（Mapperが返したEntityの値がResponseに正しく移し替わるか）。`hasSize` で件数、BigDecimalは `isEqualByComparingTo`
 ---
-Last Updated: 2026/05/30
+Last Updated: 2026/06/01
