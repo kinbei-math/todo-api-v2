@@ -794,5 +794,16 @@ erDiagram
   - N+1問題（ヘッダN件に対し明細SELECTがN回）を認識した上で、YAGNIに基づき今は許容。コメントで意図を明記（実データでスロークエリが出たらIN句/JOINで最適化）
   - `PurchaseOrderServiceTest` を作成。判断36（Entityは本物、Mapperはモック＝Sociable Unit Test）に沿い、2つのMapperを `@Mock`、`PurchaseOrderService` を `@InjectMocks`
   - findById 正常系テストを実装。全フィールドを検証（Mapperが返したEntityの値がResponseに正しく移し替わるか）。`hasSize` で件数、BigDecimalは `isEqualByComparingTo`
+
+### 74. W16 Step 6：発注管理ServiceのユニットテストをArgumentCaptorで完成
+
+- **日付**: 2026/06/02,03
+- **ファイル**: [PurchaseOrderServiceTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/service/PurchaseOrderServiceTest.java)
+- **学習内容**:
+  - Serviceテスト6本を完成（findById 正常/異常、create 正常/lineNo採番/UK重複、findAll 複数件/0件）
+  - ArgumentCaptor で insert/insertLines に渡された Entity を捕まえ、create固有ロジック（lineNo採番・DTO→Entity変換・createdBy）を検証。再SELECT方式では「入力検証」と「出力検証」を分離する必要があると理解
+  - doAnswer + ReflectionTestUtils で void メソッド insert の id 書き戻し（useGeneratedKeys の副作用）を再現
+  - 検証の相手を間違えると無意味なテストになる（capturedLines は request と突き合わせる、再SELECT結果ではない）
+  - テストのヘルパー化（setupCreateMapper / assertCapturedLines）で準備と検証を分離
 ---
-Last Updated: 2026/06/01
+Last Updated: 2026/06/03
