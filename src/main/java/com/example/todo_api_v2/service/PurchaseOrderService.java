@@ -51,6 +51,10 @@ public class PurchaseOrderService {
                     "poNumber:"+request.poNumber()+"は使用されています",e);
         }
 
+        // ログ出力
+        log.info("PurchaseOrder created [UserID: {}, PoNumber: {}, Supplier: {}, orderDate: {}]",
+                username, newPurchaseOrder.getPoNumber(), newPurchaseOrder.getSupplier(), newPurchaseOrder.getOrderDate());
+
         // poIdを取得
         Long newPoId = newPurchaseOrder.getId();
 
