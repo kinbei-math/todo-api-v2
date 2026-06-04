@@ -34,6 +34,13 @@ public class GlobalExceptionHandler {
     }
 
     //NoSuchElementExceptionを処理するメソッド
+
+    /**
+     * NoSuchElementExceptionクラスをハンドリング
+     *
+     * @param ex NoSuchElementException
+     * @return ResponseEntity<ErrorResponse>
+     */
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ErrorResponse> handleNoSuchElementException(NoSuchElementException ex){
 
@@ -43,24 +50,56 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(404,ex.getMessage()));
     }
 
-    // 入力は正しいが、不正な状態遷移を表す
-    // 独自例外InvalidStatusTransitionExceptionを処理するメソッド
+    /**
+     * 入力は正しいが、不正な状態遷移を表す
+     * <p>
+     * 独自例外クラス　InvalidStatusTransitionExceptionをハンドリング
+     *
+     * @param ex InvalidStatusTransitionException
+     * @return ResponseEntity<ErrorResponse>
+     */
     @ExceptionHandler(InvalidStatusTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidStatusTransitionException(InvalidStatusTransitionException ex){
         log.warn("InvalidStatusTransitionException [message = {}]",ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409,ex.getMessage()));
     }
 
-    // 重複したItemCodeの入力エラー
-    // 独自例外クラスDuplicateItemCodeExceptionをハンドリング
+    /**
+     * 重複したItemCodeの入力エラー
+     * <p>
+     * 独自例外クラスDuplicateItemCodeExceptionをハンドリング
+     *
+     * @param ex DuplicateItemCodeException
+     * @return ResponseEntity<ErrorResponse>
+     */
     @ExceptionHandler(DuplicateItemCodeException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateItemCodeException(DuplicateItemCodeException ex){
         log.warn("DuplicateItemCodeException [message = {}]", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409, ex.getMessage()));
     }
 
-    //Exception.classを捕まえる汎用ハンドラ
-    //情報漏洩のため、詳細は返さない。
+    /**
+     * 重複したPoNumberの入力エラー
+     * <p>
+     * 独自例外クラス DuplicatePoNumberExceptionをハンドリング
+     *
+     * @param ex DupicatePoNumberException
+     * @return ResponseEntity<ErrorResponse>
+     */
+    @ExceptionHandler(DuplicatePoNumberException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePoNumberException(DuplicatePoNumberException ex){
+        log.warn("DuplicatePoNumberException [message = {}]", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(409, ex.getMessage()));
+    }
+
+    /**
+     * Exception.classを捕まえる汎用ハンドラ
+     * <p>
+     * 情報漏洩のため、詳細は返さない。
+     *
+     * @param e ハンドリングできなかったすべてのException
+     * @return ResponseEntity<ErrorResponse>
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleSystemError(Exception e){
 
