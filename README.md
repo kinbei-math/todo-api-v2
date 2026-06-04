@@ -805,5 +805,24 @@ erDiagram
   - doAnswer + ReflectionTestUtils で void メソッド insert の id 書き戻し（useGeneratedKeys の副作用）を再現
   - 検証の相手を間違えると無意味なテストになる（capturedLines は request と突き合わせる、再SELECT結果ではない）
   - テストのヘルパー化（setupCreateMapper / assertCapturedLines）で準備と検証を分離
+
+### 75. W16 Step 7: 入荷処理 receive の Service 実装
+
+- **日付**: 2026/06/04
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 入荷処理を「明細1件ずつ」方式で実装（`POST /api/purchase-orders/{poId}/lines/{lineNo}/receive`、ボディは receivedAt のみ）。一括にすると納品日が潰れ分納を表現できないため。
+  - 例外設計を整理：二重 receive=`InvalidStatusTransitionException`（409・既存再利用）、lineNo 不在=`PurchaseOrderLineNotFoundException`（404・NoSuchElement 継承で新規）、poId 不在=`PurchaseOrderNotFoundException`（404・既存）。
+  - 明細探索は `lines.get(lineNo-1)`（index 依存・欠番で破綻）を避け、`stream().filter(l -> l.getLineNo().equals(lineNo))` で値一致に修正。
+  - `refreshStatus` 後の `updatePoStatus(po)` 呼び出し漏れを修正（メモリ上のヘッダ status 変更を DB に反映）。
+
+### 76. W16: DuplicatePoNumberException のハンドラ追加（500→409 修正）
+
+- **日付**: 2026/06/04
+- **ファイル**: [GlobalExceptionHandler.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java)
+- **学習内容**:
+  - 専用ハンドラが無く `Exception.class` の汎用ハンドラに拾われて 500 化していたバグを、専用ハンドラ追加で 409 に修正。
+  - `@ExceptionHandler` の型マッチは「自分自身に最も近いハンドラ」を優先する。継承元が 500 系でも専用ハンドラがあれば意図したステータスで返る（`DuplicateItemCodeException` が IllegalState 継承でも 409 で返る理由）。
+  - ハンドラのマッチングは記述順ではなく型の近さで決まる（Security のフィルタ順とは別物）。
 ---
-Last Updated: 2026/06/03
+Last Updated: 2026/06/04
