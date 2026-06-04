@@ -3,9 +3,11 @@ package com.example.todo_api_v2.service;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderCreateRequest;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderLineResponse;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderResponse;
+import com.example.todo_api_v2.dto.purchaseorder.ReceiveLineRequest;
 import com.example.todo_api_v2.entity.PurchaseOrder;
 import com.example.todo_api_v2.entity.PurchaseOrderLine;
 import com.example.todo_api_v2.exception.DuplicatePoNumberException;
+import com.example.todo_api_v2.exception.PurchaseOrderLineNotFoundException;
 import com.example.todo_api_v2.exception.PurchaseOrderNotFoundException;
 import com.example.todo_api_v2.mapper.PurchaseOrderLineMapper;
 import com.example.todo_api_v2.mapper.PurchaseOrderMapper;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -99,6 +102,48 @@ public class PurchaseOrderService {
                 .map( po-> assembleResponse(po, purchaseOrderLineMapper.findByPoId(po.getId()))
                 ).toList();
     }// N+1だが発注件数が少ないため許容（実データでスロークエリが出たらIN句/JOINで最適化）
+
+    @Transactional
+    public PurchaseOrderResponse receive(Long poId, Integer lineNo, ReceiveLineRequest request) {
+        // 発注ヘッダの存在確認
+        PurchaseOrder po = purchaseOrderMapper.findById(poId).orElseThrow(()->
+                new PurchaseOrderNotFoundException("発注ヘッダがDBに存在しません。PoId:" + poId));
+        // 明細のリストを取り出す
+        List<PurchaseOrderLine> lines = purchaseOrderLineMapper.findByPoId(poId);
+        // lineNo行を探す
+        PurchaseOrderLine updateLine = lines.stream()
+                .filter(line -> line.getLineNo().equals(lineNo))
+                .findFirst()
+                .orElseThrow(() -> new PurchaseOrderLineNotFoundException(
+                        "明細が見つかりません。PoId:" + poId + ", LineNo:" + lineNo));
+
+        // 明細の状態更新の可否判断
+        LocalDateTime updatedAt = LocalDateTime.now();
+        String operator = getCurrentUsername();
+        updateLine.markAsReceived(request.receivedAt(), operator, updatedAt); // 既に入荷済みなら409
+
+        // 明細行の更新
+        purchaseOrderLineMapper.updateReceipt(updateLine);
+        // ログ出力
+        log.info("PurchaseOrderLine updateReceipt [UserID: {}, PoNumber: {}, LineNo: {}, ReceivedAt: {}]",
+                operator, po.getPoNumber(), lineNo, request.receivedAt());
+
+        // 発注ヘッダの更新確認
+        po.refreshStatus(lines, operator, updatedAt);
+
+        //発注ヘッダの更新
+        purchaseOrderMapper.updatePoStatus(po);
+        // ログ出力
+        log.info("PurchaseOrder update [UserID: {}, PoNumber: {}, Status: {}]",
+                operator, po.getPoNumber(), po.getStatus());
+
+        // responseを返す
+        PurchaseOrder responsePo = purchaseOrderMapper.findById(poId).orElseThrow(()->
+                new PurchaseOrderNotFoundException("発注ヘッダがDBに存在しません。PoId:" + poId));
+        List<PurchaseOrderLine> responseLines = purchaseOrderLineMapper.findByPoId(poId);
+        return assembleResponse(responsePo, responseLines);
+    }
+
 
     /**
      * DTOをPurchaseOrderに詰めなおすヘルパーメソッド
