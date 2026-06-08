@@ -824,5 +824,14 @@ erDiagram
   - 専用ハンドラが無く `Exception.class` の汎用ハンドラに拾われて 500 化していたバグを、専用ハンドラ追加で 409 に修正。
   - `@ExceptionHandler` の型マッチは「自分自身に最も近いハンドラ」を優先する。継承元が 500 系でも専用ハンドラがあれば意図したステータスで返る（`DuplicateItemCodeException` が IllegalState 継承でも 409 で返る理由）。
   - ハンドラのマッチングは記述順ではなく型の近さで決まる（Security のフィルタ順とは別物）。
+
+### 77. 発注管理APIのController実装とテスト方針決定
+
+- **日付**: 2026/06/08
+- **ファイル**: [PurchaseOrderController.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/controller/PurchaseOrderController.java)
+- **学習内容**:
+  - `PurchaseOrderController` を実装（create=201 / findById・findAll=200 / receive=200、base-pathは既存規約に揃えて `/api` なし）
+  - 入荷の `receive` を当初 `@GetMapping` にしていたバグを修正。GETはボディを持たない前提のため、状態更新は `@PostMapping` が正しい
+  - ControllerTestはフルコンテキスト（`@SpringBootTest`）方式に決定。`@WebMvcTest`＋`@MockBean` だと例外→ステータス（404/409）とSecurityをモックで潰して検証できないため
 ---
-Last Updated: 2026/06/04
+Last Updated: 2026/06/08
