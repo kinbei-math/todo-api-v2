@@ -1,14 +1,13 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderCreateRequest;
-import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderLineCreateRequest;
-import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderLineResponse;
-import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderResponse;
+import com.example.todo_api_v2.dto.purchaseorder.*;
 import com.example.todo_api_v2.entity.PoLineStatus;
 import com.example.todo_api_v2.entity.PoStatus;
 import com.example.todo_api_v2.entity.PurchaseOrder;
 import com.example.todo_api_v2.entity.PurchaseOrderLine;
 import com.example.todo_api_v2.exception.DuplicatePoNumberException;
+import com.example.todo_api_v2.exception.InvalidStatusTransitionException;
+import com.example.todo_api_v2.exception.PurchaseOrderLineNotFoundException;
 import com.example.todo_api_v2.exception.PurchaseOrderNotFoundException;
 import com.example.todo_api_v2.mapper.PurchaseOrderLineMapper;
 import com.example.todo_api_v2.mapper.PurchaseOrderMapper;
@@ -46,6 +45,7 @@ public class PurchaseOrderServiceTest {
     private final BigDecimal price2 = new BigDecimal("200.00");
     private final LocalDate dueDate = LocalDate.of(2026,6,1);
     private final LocalDate dueDate2 = LocalDate.of(2026,6,2);
+    private final LocalDate receivedAt = LocalDate.of(2026,6,1);
 
 
     @Mock        private PurchaseOrderLineMapper purchaseOrderLineMapper;
@@ -212,6 +212,113 @@ public class PurchaseOrderServiceTest {
         assertThat(responses).isEmpty();
     }
 
+    @Test @DisplayName("一部の明細を入荷するとヘッダはORDEREDのまま、対象明細だけRECEIVEDになる")
+    void receive_partialLines_keepsHeaderOrdered(){
+        // オブジェクト準備
+        PurchaseOrderLine line1 = createLine(1L, 1, PoLineStatus.ORDERED);
+        PurchaseOrderLine line2 = createLine(2L, 2, PoLineStatus.ORDERED);
+        List<PurchaseOrderLine> lines = List.of(line1, line2);
+        PurchaseOrder po = createTestPO(1L, "TEST-001");
+        ReceiveLineRequest request = new ReceiveLineRequest(receivedAt);
+
+        // Mapperの準備
+        when(purchaseOrderMapper.findById(1L)).thenReturn(Optional.of(po));
+        when(purchaseOrderLineMapper.findByPoId(1L)).thenReturn(lines);
+
+        // 実行
+        purchaseOrderService.receive(1L, 1,request);
+
+        // 検証
+        verify(purchaseOrderMapper, times(1)).updatePoStatus(po);
+        verify(purchaseOrderLineMapper, times(1)).updateReceipt(line1);
+        verify(purchaseOrderLineMapper, never()).updateReceipt(line2);
+        assertThat(po.getStatus()).isEqualTo(PoStatus.ORDERED);
+        assertThat(line1.getStatus()).isEqualTo(PoLineStatus.RECEIVED);
+        assertThat(line2.getStatus()).isEqualTo(PoLineStatus.ORDERED);
+        assertThat(line1.getReceivedAt()).isEqualTo(receivedAt);
+    }
+
+    @Test @DisplayName("最後の未入荷明細を入荷するとヘッダがRECEIVEDになる")
+    void receive_lastLine_marksHeaderReceived(){
+        // オブジェクト準備
+        PurchaseOrderLine line1 = createLine(1L, 1, PoLineStatus.RECEIVED);
+        PurchaseOrderLine line2 = createLine(2L, 2, PoLineStatus.ORDERED);
+        List<PurchaseOrderLine> lines = List.of(line1, line2);
+        PurchaseOrder po = createTestPO(1L, "TEST-001");
+        ReceiveLineRequest request = new ReceiveLineRequest(receivedAt);
+
+        // Mapperの準備
+        when(purchaseOrderMapper.findById(1L)).thenReturn(Optional.of(po));
+        when(purchaseOrderLineMapper.findByPoId(1L)).thenReturn(lines);
+
+        // 実行
+        purchaseOrderService.receive(1L, 2,request);
+
+        // 検証
+        verify(purchaseOrderMapper, times(1)).updatePoStatus(po);
+        verify(purchaseOrderLineMapper, never()).updateReceipt(line1);
+        verify(purchaseOrderLineMapper, times(1)).updateReceipt(line2);
+        assertThat(po.getStatus()).isEqualTo(PoStatus.RECEIVED);
+        assertThat(line1.getStatus()).isEqualTo(PoLineStatus.RECEIVED);
+        assertThat(line2.getStatus()).isEqualTo(PoLineStatus.RECEIVED);
+        assertThat(line2.getReceivedAt()).isEqualTo(receivedAt);
+    }
+
+    @Test @DisplayName("存在しないpoIdを指定するとPurchaseOrderNotFoundExceptionを投げる")
+    void receive_poNotFound_throwsException(){
+        // Mapperの準備
+        when(purchaseOrderMapper.findById(999L)).thenReturn(Optional.empty());
+
+        // 実行・検証
+        assertThatThrownBy(()->
+                purchaseOrderService.receive(999L, 1, new ReceiveLineRequest(receivedAt)))
+                .isInstanceOf(PurchaseOrderNotFoundException.class)
+                .hasMessageContaining("DBに存在しません");
+    }
+
+    @Test @DisplayName("存在しないlineNoを指定するとPurchaseOrderLineNotFoundExceptionを投げる")
+    void receive_lineNotFound_throwsException(){
+        // オブジェクト準備
+        PurchaseOrderLine line1 = createLine(1L, 1, PoLineStatus.ORDERED);
+        PurchaseOrderLine line2 = createLine(2L, 2, PoLineStatus.ORDERED);
+        List<PurchaseOrderLine> lines = List.of(line1, line2);
+        PurchaseOrder po = createTestPO(1L, "TEST-001");
+        ReceiveLineRequest request = new ReceiveLineRequest(receivedAt);
+
+        // Mapperの準備
+        when(purchaseOrderMapper.findById(1L)).thenReturn(Optional.of(po));
+        when(purchaseOrderLineMapper.findByPoId(1L)).thenReturn(lines);
+
+        // 実行・検証
+        assertThatThrownBy(()->
+                purchaseOrderService.receive(1L, 99, request))
+                .isInstanceOf(PurchaseOrderLineNotFoundException.class)
+                .hasMessageContaining("明細が見つかりません");
+        verify(purchaseOrderMapper, never()).updatePoStatus(any());
+        verify(purchaseOrderLineMapper, never()).updateReceipt(any());
+    }
+
+    @Test @DisplayName("入荷済みの明細を再度入荷するとInvalidStatusTransitionExceptionを投げる")
+    void receive_alreadyReceived_throwsException(){
+        // オブジェクト準備
+        PurchaseOrderLine line1 = createLine(1L, 1, PoLineStatus.RECEIVED);
+        PurchaseOrderLine line2 = createLine(2L, 2, PoLineStatus.ORDERED);
+        List<PurchaseOrderLine> lines = List.of(line1, line2);
+        PurchaseOrder po = createTestPO(1L, "TEST-001");
+        ReceiveLineRequest request = new ReceiveLineRequest(receivedAt);
+
+        // Mapperの準備
+        when(purchaseOrderMapper.findById(1L)).thenReturn(Optional.of(po));
+        when(purchaseOrderLineMapper.findByPoId(1L)).thenReturn(lines);
+
+        // 実行・検証
+        assertThatThrownBy(()->
+                purchaseOrderService.receive(1L, 1, request))
+                .isInstanceOf(InvalidStatusTransitionException.class)
+                .hasMessageContaining("不正遷移");
+        verify(purchaseOrderMapper, never()).updatePoStatus(any());
+        verify(purchaseOrderLineMapper, never()).updateReceipt(any());
+    }
 
 
     /**
@@ -287,6 +394,20 @@ public class PurchaseOrderServiceTest {
                 createdBy,
                 createdAt
         );
+    }
+
+    /**
+     * statusを変更できる明細行を作るヘルパーメソッド
+     *
+     * @param id　PurchaseOrderLineのid(PK)
+     * @param lineNo 行番号(Intger)
+     * @param status PoLineStatus
+     * @return PurchaseOrderLine
+     */
+    private PurchaseOrderLine createLine(Long id, Integer lineNo, PoLineStatus status){
+        return new PurchaseOrderLine(
+                id, 1L, 1L, lineNo, qty, price,
+                dueDate, status, null, null, createdBy, createdAt, null, null);
     }
 
     /**
