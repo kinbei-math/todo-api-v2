@@ -833,5 +833,14 @@ erDiagram
   - `PurchaseOrderController` を実装（create=201 / findById・findAll=200 / receive=200、base-pathは既存規約に揃えて `/api` なし）
   - 入荷の `receive` を当初 `@GetMapping` にしていたバグを修正。GETはボディを持たない前提のため、状態更新は `@PostMapping` が正しい
   - ControllerTestはフルコンテキスト（`@SpringBootTest`）方式に決定。`@WebMvcTest`＋`@MockBean` だと例外→ステータス（404/409）とSecurityをモックで潰して検証できないため
+
+### 78. 発注管理APIのControllerTest（create / get）を実装
+
+- **日付**: 2026/06/10
+- **ファイル**: [PurchaseOrderControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/controller/PurchaseOrderControllerTest.java)
+- **学習内容**:
+  - ControllerTestをフルコンテキスト（`@SpringBootTest`＋`webAppContextSetup`＋`springSecurity()`）で実装。createの正常系・バリデーション・409重複、getById・一覧・404・認証401まで14本が全緑
+  - 認証必須エンドポイントのテストには `@WithMockUser(roles = "USER")` が必須。正常系の201テストで付け忘れて401で落ちるバグを修正（401はController到達前にSecurityで弾かれる）
+  - バリデーション異常系（#2〜#9）は入口で弾かれDBに到達しないためitem作成は不要、重複（#10）は1回目POSTが実INSERTされFK制約を踏むためitem作成が必要、という「エラーがどの層で起きるか」でテストデータ要否を判断
 ---
-Last Updated: 2026/06/08
+Last Updated: 2026/06/10
