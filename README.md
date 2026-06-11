@@ -18,10 +18,28 @@ gradlew.bat bootRun
 ```
 
 ## 動作確認用のエンドポイント一覧
+
+> 補足：下記はすべて認証必須です（ロール別の扱いは後述の「認可（アクセス制御）の設計方針」を参照）。`/todos` 以外の DELETE は現時点で存在しません。
+
 | HTTPメソッド | パス | 役割 |
 | :--- | :--- | :--- |
 | GET | `/health` | アプリケーションが正常に稼働しているか（ヘルスチェック）を確認する |
-| GET | `/todos` | 現在登録されているTodoの一覧（リスト）を取得する |
+| GET | `/todos` | Todo一覧を取得する（`?keyword=xxx` でタイトル部分一致検索） |
+| POST | `/todos` | Todoを新規作成する |
+| GET | `/todos/{id}` | Todoを1件取得する |
+| PUT | `/todos/{id}` | Todoの内容を更新する |
+| DELETE | `/todos/{id}` | Todoを削除する（ADMINのみ） |
+| PATCH | `/todos/{id}/status` | Todoの状態を遷移させる（TODO / DOING / DONE） |
+| PATCH | `/todos/bulk-status` | 複数のTodoの状態を一括で変更する |
+| GET | `/items` | 品目（マスタ）の一覧を取得する |
+| POST | `/items` | 品目を新規登録する |
+| GET | `/items/{id}` | 品目を1件取得する |
+| GET | `/items/{id}/stock` | 品目の現在庫を照会する（入出庫履歴のSUMで算出） |
+| POST | `/stock-movements` | 在庫変動（入庫 INBOUND / 出庫 OUTBOUND）を登録する |
+| POST | `/purchase-orders` | 発注を新規作成する（ヘッダ＋明細を一括登録） |
+| GET | `/purchase-orders` | 発注の一覧を取得する（各発注に明細を含む） |
+| GET | `/purchase-orders/{id}` | 発注を1件取得する（明細を含む） |
+| POST | `/purchase-orders/{poId}/lines/{lineNo}/receive` | 発注明細を入荷登録する（1明細ずつ・分納対応） |
 
 ## 🏗️ アーキテクチャ構成とデータの流れ
 
@@ -84,25 +102,79 @@ graph LR
 
 ## データベース設計(ER図)
 
-本アプリケーションはデータベース構造は以下の通りです。
-Flywayを導入し、データベースのマイグレーションを自動化しています。
-Week14時点。今後はtodosにuser_idを追加して、外部キーとして繋げる。
+本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V8）。
+W16時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
 
 ```mermaid
 erDiagram
-    users{
-         BIGINT id PK "自動採番"
-         VARCHAR(255) email UK "一意なログインID"
-         VARCHAR(20) role "権限:USER,ADMIN"
-         VARCHAR(255) password_hash "ハッシュ化パスワード"
+    items                ||--o{ stock_movements      : "在庫変動"
+    items                ||--o{ purchase_order_lines : "発注明細"
+    purchase_orders      ||--o{ purchase_order_lines : "明細"
+    purchase_order_lines |o--o{ stock_movements      : "入荷時に紐付(NULL可)"
+
+    users {
+        BIGINT id PK "自動採番"
+        VARCHAR(255) email UK "一意なログインID"
+        VARCHAR(20) role "権限:USER,ADMIN"
+        VARCHAR(255) password_hash "ハッシュ化パスワード"
     }
 
-    todos{
-         BIGINT id PK "自動採番"
-         VARCHAR(255) title "タスクのタイトル"
-         DATE due_date "期限日"
-         VARCHAR(20) todo_status "状態:TODO,DOING,DONE"
-         TIMESTAMP completed_at "完了絶対時刻"
+    todos {
+        BIGINT id PK "自動採番"
+        VARCHAR(255) title "タスクのタイトル"
+        DATE due_date "期限日"
+        VARCHAR(20) todo_status "状態:TODO,DOING,DONE"
+        TIMESTAMP completed_at "完了絶対時刻"
+    }
+
+    items {
+        BIGINT id PK "自動採番(サロゲートキー)"
+        VARCHAR(20) item_code UK "品目コード(業務コード)"
+        VARCHAR(100) item_name "品名"
+        VARCHAR(10) uom "単位:SET,PC,KG,G,METER"
+        VARCHAR(50) category "区分:RAW_MATERIAL等5種"
+        TIMESTAMP created_at "作成日時(System Time)"
+        TIMESTAMP updated_at "更新日時(System Time)"
+    }
+
+    stock_movements {
+        BIGINT id PK "自動採番"
+        BIGINT item_id FK "items.id"
+        BIGINT po_line_id FK "purchase_order_lines.id (NULL可)"
+        VARCHAR(10) movement_type "区分:INBOUND,OUTBOUND"
+        DECIMAL qty "DECIMAL(12,3) 変化量の絶対値"
+        DATE movement_date "業務日(Business Time)"
+        TIMESTAMP created_at "登録日時(System Time)"
+        VARCHAR(255) created_by "操作者(username)"
+    }
+
+    purchase_orders {
+        BIGINT id PK "自動採番(サロゲートキー)"
+        VARCHAR(20) po_number UK "発注番号(業務コード)"
+        VARCHAR(100) supplier "仕入先"
+        DATE order_date "発注日(Business Time)"
+        VARCHAR(20) status "状態:ORDERED,RECEIVED(明細の集約)"
+        TIMESTAMP created_at "作成日時(System Time)"
+        VARCHAR(255) created_by "作成者"
+        TIMESTAMP updated_at "更新日時(System Time)"
+        VARCHAR(255) updated_by "更新者(NULL可)"
+    }
+
+    purchase_order_lines {
+        BIGINT id PK "自動採番"
+        BIGINT po_id FK "purchase_orders.id"
+        BIGINT item_id FK "items.id"
+        SMALLINT line_no "行番号(PO内で一意)"
+        DECIMAL qty "DECIMAL(12,3) 発注数量"
+        DECIMAL price "DECIMAL(12,2) 単価"
+        DATE due_date "納期(Business Time)"
+        VARCHAR(20) status "状態:ORDERED,RECEIVED(真実の源)"
+        VARCHAR(255) received_by "入荷登録者(NULL可)"
+        DATE received_at "納品日(NULL可,Business Time)"
+        VARCHAR(255) created_by "登録者"
+        TIMESTAMP created_at "登録日時(System Time)"
+        VARCHAR(255) updated_by "更新者(NULL可)"
+        TIMESTAMP updated_at "更新日時(System Time)"
     }
 ```
 
@@ -162,15 +234,43 @@ erDiagram
     }
   ]
 }
+```
 
 ### 2. リソース非存在エラー（404 Not Found）
 指定されたIDのTodoが存在しない場合など、対象のデータが見つからない場合に返却されます。この場合、個別の入力項目エラーではないため `errors` は空の配列となります。
+
+404 は Todo に限らず、品目（`/items/{id}`）・発注（`/purchase-orders/{id}`）・発注明細（`.../lines/{lineNo}`）でも同じフォーマットで返ります（例：`発注ヘッダがDBに存在しません。poId=999` / `明細が見つかりません。PoId:1, LineNo:100`）。
 
 **レスポンス例：**
 ```json
 {
   "statusCode": 404,
   "message": "Todoが見つかりません。",
+  "errors": []
+}
+```
+
+### 3. 競合エラー（409 Conflict）
+リクエスト自体は正しいが、対象リソースの「現在の状態」と矛盾する場合に返却されます。入力形式の誤り（400）ではなく、状態の不整合を表します。`errors` は空の配列となります。
+
+**発生する主なケース：**
+- 発注番号（`po_number`）の重複登録（UK制約違反）
+- 入荷済みの発注明細への再入荷（状態遷移ルール違反：ORDERED→RECEIVED 以外の遷移）
+
+**レスポンス例（発注番号の重複）：**
+```json
+{
+  "statusCode": 409,
+  "message": "poNumber:PO-20260511-001は使用されています",
+  "errors": []
+}
+```
+
+**レスポンス例（二重入荷）：**
+```json
+{
+  "statusCode": 409,
+  "message": "不正遷移:poId=1, lineNo=1, RECEIVEDからRECEIVEDへの遷移",
   "errors": []
 }
 ```
@@ -842,5 +942,16 @@ erDiagram
   - ControllerTestをフルコンテキスト（`@SpringBootTest`＋`webAppContextSetup`＋`springSecurity()`）で実装。createの正常系・バリデーション・409重複、getById・一覧・404・認証401まで14本が全緑
   - 認証必須エンドポイントのテストには `@WithMockUser(roles = "USER")` が必須。正常系の201テストで付け忘れて401で落ちるバグを修正（401はController到達前にSecurityで弾かれる）
   - バリデーション異常系（#2〜#9）は入口で弾かれDBに到達しないためitem作成は不要、重複（#10）は1回目POSTが実INSERTされFK制約を踏むためitem作成が必要、という「エラーがどの層で起きるか」でテストデータ要否を判断
+
+### 79. W16完了：発注管理APIのControllerTest（receive系）とREADME整備
+
+- **日付**: 2026/06/11
+- **ファイル**: [PurchaseOrderControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/controller/PurchaseOrderControllerTest.java), [README.md](README.md)
+- **学習内容**:
+  - receive系6本を実装しControllerTest全20本が緑（部分入荷でヘッダORDERED維持／完了入荷でヘッダRECEIVED／二重入荷409／receivedAt null 400／poId不在404／lineNo不在404）
+  - `@Validated @RequestBody` のバリデーションはService到達前に効くため、receivedAt null の400テストは発注を作らずパス変数だけ与えても検証できる（バリデーションが存在チェックより先に効く順序）
+  - Jackson 3（`tools.jackson`）では `writeValueAsString` がチェック例外を投げないため、JSON生成のみのヘルパーから `throws Exception` を外せる（Jackson 2との差異）
+  - W16のDoD完了。READMEにエンドポイント一覧（品目／在庫／発注）・ER図（6テーブル）・409エラー仕様を追記
+
 ---
-Last Updated: 2026/06/10
+Last Updated: 2026/06/11
