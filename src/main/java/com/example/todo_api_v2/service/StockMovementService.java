@@ -1,7 +1,7 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.StockMovementCreateRequest;
-import com.example.todo_api_v2.dto.StockMovementResponse;
+import com.example.todo_api_v2.dto.stock.StockMovementCreateRequest;
+import com.example.todo_api_v2.dto.stock.StockMovementResponse;
 import com.example.todo_api_v2.entity.StockMovement;
 import com.example.todo_api_v2.exception.ItemNotFoundException;
 import com.example.todo_api_v2.mapper.ItemMapper;

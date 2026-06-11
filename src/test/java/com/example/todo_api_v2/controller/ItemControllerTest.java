@@ -1,6 +1,6 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.ItemResponse;
+import com.example.todo_api_v2.dto.item.ItemResponse;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -152,8 +152,8 @@ public class ItemControllerTest {
 
     @Test @WithMockUser(roles = "USER") @DisplayName("POST/items 異常系：重複登録")
     void testCreateItem_shouldReturn409_whenItemCodeIsDuplicate() throws Exception{
-        // 準備
-        ItemResponse creatItem = createItemForTest("TEST-0001","test");
+        // 準備(itemCodeを事前登録 戻り値は捨てる)
+        createItemForTest("TEST-0001","test");
         String json = """
                 {
                 "itemCode":"TEST-0001",
