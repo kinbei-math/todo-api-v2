@@ -5,6 +5,7 @@ import com.example.todo_api_v2.dto.item.ItemResponse;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderCreateRequest;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderLineCreateRequest;
 import com.example.todo_api_v2.dto.purchaseorder.PurchaseOrderResponse;
+import com.example.todo_api_v2.dto.purchaseorder.ReceiveLineRequest;
 import com.example.todo_api_v2.entity.Category;
 import com.example.todo_api_v2.entity.UomType;
 import org.junit.jupiter.api.AfterEach;
@@ -41,16 +42,17 @@ public class PurchaseOrderControllerTest {
     private MockMvc mockMvc;
 
     // テスト用変数の準備
-    String     poNumber  = "TEST-PO-001";
-    String     supplier  = "testSupllier";
-    LocalDate  orderDate = LocalDate.of(2026,5,1);
-    BigDecimal qty1      = new BigDecimal("10.000");
-    BigDecimal qty2      = new BigDecimal("20.000");
-    BigDecimal price1    = new BigDecimal("100.00");
-    BigDecimal price2    = new BigDecimal("200.00");
-    LocalDate  dueDate1  = LocalDate.of(2026, 6, 1);
-    LocalDate  dueDate2  = LocalDate.of(2026, 6, 2);
-
+    String     poNumber    = "TEST-PO-001";
+    String     supplier    = "testSupllier";
+    LocalDate  orderDate   = LocalDate.of(2026,5,1);
+    BigDecimal qty1        = new BigDecimal("10.000");
+    BigDecimal qty2        = new BigDecimal("20.000");
+    BigDecimal price1      = new BigDecimal("100.00");
+    BigDecimal price2      = new BigDecimal("200.00");
+    LocalDate  dueDate1    = LocalDate.of(2026, 6, 1);
+    LocalDate  dueDate2    = LocalDate.of(2026, 6, 2);
+    LocalDate  receivedAt1 = LocalDate.of(2026,5,30);
+    LocalDate  receivedAt2 = LocalDate.of(2026,5,31);
 
 
     //すべてのテストの前にmockを作成
@@ -327,6 +329,159 @@ public class PurchaseOrderControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 正常系：部分入荷")
+    void testReceivePurchaseOrderLine_shouldReturn200AndHeaderOrdered_whenPartiallyReceived()throws Exception{
+        // 準備
+        ItemResponse response = createItemForTest("TEST-ITEM-001","testItem");
+        PurchaseOrderLineCreateRequest lineCreateRequest1
+                = new PurchaseOrderLineCreateRequest(response.id(), qty1, price1, dueDate1);
+        PurchaseOrderLineCreateRequest lineCreateRequest2
+                = new PurchaseOrderLineCreateRequest(response.id(), qty2, price2, dueDate2);
+        List<PurchaseOrderLineCreateRequest> requestLines
+                = List.of(lineCreateRequest1, lineCreateRequest2);
+        PurchaseOrderResponse orderResponse = createPoForTest(poNumber, supplier, orderDate, requestLines);
+
+        String requestJson = createReceiveLineRequestJson(receivedAt1);
+        Long poId = orderResponse.id();
+        Integer lineNo1 = orderResponse.lines().get(0).lineNo();
+        Integer lineNo2 = orderResponse.lines().get(1).lineNo();
+
+        // 実行・検証
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                "/purchase-orders/"+poId+"/lines/"+lineNo1+"/receive")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ORDERED"))
+                .andExpect(jsonPath("$.lines[0].lineNo").value(lineNo1))
+                .andExpect(jsonPath("$.lines[0].status").value("RECEIVED"))
+                .andExpect(jsonPath("$.lines[1].lineNo").value(lineNo2))
+                .andExpect(jsonPath("$.lines[1].status").value("ORDERED"));
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 正常系：完了入荷")
+    void testReceivePurchaseOrderLine_shouldReturn200AndHeaderReceived_whenAllReceived()throws Exception{
+        // 準備
+        ItemResponse response = createItemForTest("TEST-ITEM-001","testItem");
+        PurchaseOrderLineCreateRequest lineCreateRequest1
+                = new PurchaseOrderLineCreateRequest(response.id(), qty1, price1, dueDate1);
+        PurchaseOrderLineCreateRequest lineCreateRequest2
+                = new PurchaseOrderLineCreateRequest(response.id(), qty2, price2, dueDate2);
+        List<PurchaseOrderLineCreateRequest> requestLines
+                = List.of(lineCreateRequest1, lineCreateRequest2);
+        PurchaseOrderResponse orderResponse = createPoForTest(poNumber, supplier, orderDate, requestLines);
+
+        String requestJson1 = createReceiveLineRequestJson(receivedAt1);
+        String requestJson2 = createReceiveLineRequestJson(receivedAt2);
+
+        Long poId = orderResponse.id();
+        Integer lineNo1 = orderResponse.lines().get(0).lineNo();
+        Integer lineNo2 = orderResponse.lines().get(1).lineNo();
+        // 事前receive
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/"+poId+"/lines/"+lineNo1+"/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson1))
+                .andExpect(status().isOk());
+
+        // 追記分
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/"+poId+"/lines/"+lineNo2+"/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson2))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECEIVED"))
+                .andExpect(jsonPath("$.lines[0].lineNo").value(lineNo1))
+                .andExpect(jsonPath("$.lines[0].status").value("RECEIVED"))
+                .andExpect(jsonPath("$.lines[1].lineNo").value(lineNo2))
+                .andExpect(jsonPath("$.lines[1].status").value("RECEIVED"));
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 異常系：二重入荷")
+    void testReceivePurchaseOrderLine_shouldReturn409_whenAlreadyReceived()throws Exception{
+        // 準備
+        ItemResponse response = createItemForTest("TEST-ITEM-001","testItem");
+        PurchaseOrderLineCreateRequest lineCreateRequest1
+                = new PurchaseOrderLineCreateRequest(response.id(), qty1, price1, dueDate1);
+        PurchaseOrderLineCreateRequest lineCreateRequest2
+                = new PurchaseOrderLineCreateRequest(response.id(), qty2, price2, dueDate2);
+        List<PurchaseOrderLineCreateRequest> requestLines
+                = List.of(lineCreateRequest1, lineCreateRequest2);
+        PurchaseOrderResponse orderResponse = createPoForTest(poNumber, supplier, orderDate, requestLines);
+
+        String requestJson = createReceiveLineRequestJson(receivedAt1);
+        Long poId = orderResponse.id();
+        Integer lineNo = orderResponse.lines().get(0).lineNo();
+
+        // 事前receive
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/"+poId+"/lines/"+lineNo+"/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isOk());
+
+        // 追記
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                        "/purchase-orders/"+poId+"/lines/"+lineNo+"/receive")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.statusCode").value(409))
+                .andExpect(jsonPath("$.message")
+                        .value("不正遷移:poId="+poId + ", lineNo=" + lineNo +
+                                ", RECEIVEDからRECEIVEDへの遷移"));
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 異常系：receivedAtが空")
+    void testReceivePurchaseOrderLine_shouldReturn400_whenReceivedAtIsNull()throws Exception{
+        String requestJson = createReceiveLineRequestJson(null);
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/1/lines/1/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("receivedAt"))
+                .andExpect(jsonPath("$.errors[0].message").value("納品日を入力してください"));
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 異常系：発注が存在しない")
+    void testReceivePurchaseOrderLine_shouldReturn404_whenPoIdNotExists()throws Exception{
+        String requestJson = createReceiveLineRequestJson(receivedAt1);
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/999/lines/1/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.statusCode").value(404))
+                .andExpect(jsonPath("$.message").value("発注ヘッダがDBに存在しません。PoId:999"));
+    }
+
+    @Test @WithMockUser(roles = "USER") @DisplayName("POST .../receive 異常系：明細行が存在しない")
+    void testReceivePurchaseOrderLine_shouldReturn404_whenLineNoNotExists()throws Exception{
+        // 準備
+        ItemResponse response = createItemForTest("TEST-ITEM-001","testItem");
+        PurchaseOrderLineCreateRequest lineCreateRequest1
+                = new PurchaseOrderLineCreateRequest(response.id(), qty1, price1, dueDate1);
+        PurchaseOrderLineCreateRequest lineCreateRequest2
+                = new PurchaseOrderLineCreateRequest(response.id(), qty2, price2, dueDate2);
+        List<PurchaseOrderLineCreateRequest> requestLines
+                = List.of(lineCreateRequest1, lineCreateRequest2);
+        PurchaseOrderResponse orderResponse = createPoForTest(poNumber, supplier, orderDate, requestLines);
+
+        String requestJson = createReceiveLineRequestJson(receivedAt1);
+        Long poId = orderResponse.id();
+
+        mockMvc.perform(MockMvcRequestBuilders.post(
+                                "/purchase-orders/"+poId+"/lines/100/receive")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.statusCode").value(404))
+                .andExpect(jsonPath("$.message")
+                        .value("明細が見つかりません。PoId:" + poId + ", LineNo:100"));
+    }
+
+
     /**
      * PurchaseOrderCreateRequest(Json)のためのヘルパーメソッド
      * @param poNumber 発注番号(UK)
@@ -334,14 +489,23 @@ public class PurchaseOrderControllerTest {
      * @param orderDate 発注日
      * @param lines 明細リスト
      * @return String(Json)
-     * @throws Exception MockMvc実行時のチェック例外
      */
     private String createPoCreateRequestJson (
             String poNumber, String supplier, LocalDate orderDate, List<PurchaseOrderLineCreateRequest> lines
-    )throws Exception{
+    ){
         PurchaseOrderCreateRequest purchaseOrderCreateRequest
                 = new PurchaseOrderCreateRequest(poNumber, supplier, orderDate, lines);
         return objectMapper.writeValueAsString(purchaseOrderCreateRequest);
+    }
+
+    /**
+     * ReceiveLineRequest(Json)のためのヘルパーメソッド
+     * @param receivedAt 納品日
+     * @return String(Json)
+     */
+    private String createReceiveLineRequestJson(LocalDate receivedAt){
+        ReceiveLineRequest receiveLineRequest = new ReceiveLineRequest(receivedAt);
+        return objectMapper.writeValueAsString(receiveLineRequest);
     }
 
     /**
