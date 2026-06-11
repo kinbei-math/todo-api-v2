@@ -101,4 +101,3 @@ public class PurchaseOrder {
         this.updatedAt = updatedAt; // 更新時間を上書き
         }
 }
-

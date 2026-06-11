@@ -18,10 +18,28 @@ gradlew.bat bootRun
 ```
 
 ## 動作確認用のエンドポイント一覧
+
+> 補足：下記はすべて認証必須です（ロール別の扱いは後述の「認可（アクセス制御）の設計方針」を参照）。`/todos` 以外の DELETE は現時点で存在しません。
+
 | HTTPメソッド | パス | 役割 |
 | :--- | :--- | :--- |
 | GET | `/health` | アプリケーションが正常に稼働しているか（ヘルスチェック）を確認する |
-| GET | `/todos` | 現在登録されているTodoの一覧（リスト）を取得する |
+| GET | `/todos` | Todo一覧を取得する（`?keyword=xxx` でタイトル部分一致検索） |
+| POST | `/todos` | Todoを新規作成する |
+| GET | `/todos/{id}` | Todoを1件取得する |
+| PUT | `/todos/{id}` | Todoの内容を更新する |
+| DELETE | `/todos/{id}` | Todoを削除する（ADMINのみ） |
+| PATCH | `/todos/{id}/status` | Todoの状態を遷移させる（TODO / DOING / DONE） |
+| PATCH | `/todos/bulk-status` | 複数のTodoの状態を一括で変更する |
+| GET | `/items` | 品目（マスタ）の一覧を取得する |
+| POST | `/items` | 品目を新規登録する |
+| GET | `/items/{id}` | 品目を1件取得する |
+| GET | `/items/{id}/stock` | 品目の現在庫を照会する（入出庫履歴のSUMで算出） |
+| POST | `/stock-movements` | 在庫変動（入庫 INBOUND / 出庫 OUTBOUND）を登録する |
+| POST | `/purchase-orders` | 発注を新規作成する（ヘッダ＋明細を一括登録） |
+| GET | `/purchase-orders` | 発注の一覧を取得する（各発注に明細を含む） |
+| GET | `/purchase-orders/{id}` | 発注を1件取得する（明細を含む） |
+| POST | `/purchase-orders/{poId}/lines/{lineNo}/receive` | 発注明細を入荷登録する（1明細ずつ・分納対応） |
 
 ## 🏗️ アーキテクチャ構成とデータの流れ
 
@@ -84,25 +102,79 @@ graph LR
 
 ## データベース設計(ER図)
 
-本アプリケーションはデータベース構造は以下の通りです。
-Flywayを導入し、データベースのマイグレーションを自動化しています。
-Week14時点。今後はtodosにuser_idを追加して、外部キーとして繋げる。
+本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V8）。
+W16時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
 
 ```mermaid
 erDiagram
-    users{
-         BIGINT id PK "自動採番"
-         VARCHAR(255) email UK "一意なログインID"
-         VARCHAR(20) role "権限:USER,ADMIN"
-         VARCHAR(255) password_hash "ハッシュ化パスワード"
+    items                ||--o{ stock_movements      : "在庫変動"
+    items                ||--o{ purchase_order_lines : "発注明細"
+    purchase_orders      ||--o{ purchase_order_lines : "明細"
+    purchase_order_lines |o--o{ stock_movements      : "入荷時に紐付(NULL可)"
+
+    users {
+        BIGINT id PK "自動採番"
+        VARCHAR(255) email UK "一意なログインID"
+        VARCHAR(20) role "権限:USER,ADMIN"
+        VARCHAR(255) password_hash "ハッシュ化パスワード"
     }
 
-    todos{
-         BIGINT id PK "自動採番"
-         VARCHAR(255) title "タスクのタイトル"
-         DATE due_date "期限日"
-         VARCHAR(20) todo_status "状態:TODO,DOING,DONE"
-         TIMESTAMP completed_at "完了絶対時刻"
+    todos {
+        BIGINT id PK "自動採番"
+        VARCHAR(255) title "タスクのタイトル"
+        DATE due_date "期限日"
+        VARCHAR(20) todo_status "状態:TODO,DOING,DONE"
+        TIMESTAMP completed_at "完了絶対時刻"
+    }
+
+    items {
+        BIGINT id PK "自動採番(サロゲートキー)"
+        VARCHAR(20) item_code UK "品目コード(業務コード)"
+        VARCHAR(100) item_name "品名"
+        VARCHAR(10) uom "単位:SET,PC,KG,G,METER"
+        VARCHAR(50) category "区分:RAW_MATERIAL等5種"
+        TIMESTAMP created_at "作成日時(System Time)"
+        TIMESTAMP updated_at "更新日時(System Time)"
+    }
+
+    stock_movements {
+        BIGINT id PK "自動採番"
+        BIGINT item_id FK "items.id"
+        BIGINT po_line_id FK "purchase_order_lines.id (NULL可)"
+        VARCHAR(10) movement_type "区分:INBOUND,OUTBOUND"
+        DECIMAL qty "DECIMAL(12,3) 変化量の絶対値"
+        DATE movement_date "業務日(Business Time)"
+        TIMESTAMP created_at "登録日時(System Time)"
+        VARCHAR(255) created_by "操作者(username)"
+    }
+
+    purchase_orders {
+        BIGINT id PK "自動採番(サロゲートキー)"
+        VARCHAR(20) po_number UK "発注番号(業務コード)"
+        VARCHAR(100) supplier "仕入先"
+        DATE order_date "発注日(Business Time)"
+        VARCHAR(20) status "状態:ORDERED,RECEIVED(明細の集約)"
+        TIMESTAMP created_at "作成日時(System Time)"
+        VARCHAR(255) created_by "作成者"
+        TIMESTAMP updated_at "更新日時(System Time)"
+        VARCHAR(255) updated_by "更新者(NULL可)"
+    }
+
+    purchase_order_lines {
+        BIGINT id PK "自動採番"
+        BIGINT po_id FK "purchase_orders.id"
+        BIGINT item_id FK "items.id"
+        SMALLINT line_no "行番号(PO内で一意)"
+        DECIMAL qty "DECIMAL(12,3) 発注数量"
+        DECIMAL price "DECIMAL(12,2) 単価"
+        DATE due_date "納期(Business Time)"
+        VARCHAR(20) status "状態:ORDERED,RECEIVED(真実の源)"
+        VARCHAR(255) received_by "入荷登録者(NULL可)"
+        DATE received_at "納品日(NULL可,Business Time)"
+        VARCHAR(255) created_by "登録者"
+        TIMESTAMP created_at "登録日時(System Time)"
+        VARCHAR(255) updated_by "更新者(NULL可)"
+        TIMESTAMP updated_at "更新日時(System Time)"
     }
 ```
 
@@ -162,15 +234,43 @@ erDiagram
     }
   ]
 }
+```
 
 ### 2. リソース非存在エラー（404 Not Found）
 指定されたIDのTodoが存在しない場合など、対象のデータが見つからない場合に返却されます。この場合、個別の入力項目エラーではないため `errors` は空の配列となります。
+
+404 は Todo に限らず、品目（`/items/{id}`）・発注（`/purchase-orders/{id}`）・発注明細（`.../lines/{lineNo}`）でも同じフォーマットで返ります（例：`発注ヘッダがDBに存在しません。poId=999` / `明細が見つかりません。PoId:1, LineNo:100`）。
 
 **レスポンス例：**
 ```json
 {
   "statusCode": 404,
   "message": "Todoが見つかりません。",
+  "errors": []
+}
+```
+
+### 3. 競合エラー（409 Conflict）
+リクエスト自体は正しいが、対象リソースの「現在の状態」と矛盾する場合に返却されます。入力形式の誤り（400）ではなく、状態の不整合を表します。`errors` は空の配列となります。
+
+**発生する主なケース：**
+- 発注番号（`po_number`）の重複登録（UK制約違反）
+- 入荷済みの発注明細への再入荷（状態遷移ルール違反：ORDERED→RECEIVED 以外の遷移）
+
+**レスポンス例（発注番号の重複）：**
+```json
+{
+  "statusCode": 409,
+  "message": "poNumber:PO-20260511-001は使用されています",
+  "errors": []
+}
+```
+
+**レスポンス例（二重入荷）：**
+```json
+{
+  "statusCode": 409,
+  "message": "不正遷移:poId=1, lineNo=1, RECEIVEDからRECEIVEDへの遷移",
   "errors": []
 }
 ```
@@ -638,5 +738,220 @@ erDiagram
   - JSONで `null` を表現する時は `"key": null` または **キーごと省略**。空文字 `""` は型ミスマッチでJacksonパースエラーになり、Bean Validationまで到達しない
   - W15 DoD完全達成：在庫管理のCore機能（Item CRUD + StockMovement登録 + 在庫照会）が一通り完成
 
+### 62. W16 Step 2: 発注管理テーブル設計とFlywayマイグレーション
+
+- **日付**: 2026/05/11
+- **ファイル**:
+  - [V5__create_purchase_orders_table.sql](src/main/resources/db/migration/V5__create_purchase_orders_table.sql)
+  - [V6__create_purchase_order_lines_table.sql](src/main/resources/db/migration/V6__create_purchase_order_lines_table.sql)
+  - [V7__add_po_line_id_to_stock_movements.sql](src/main/resources/db/migration/V7__add_po_line_id_to_stock_movements.sql)
+- **学習内容**:
+  - 発注管理(purchase_orders + purchase_order_lines)の2テーブル設計を確定。明細ごとに納期(due_date)を持ち、状態遷移ORDERED⇔RECEIVEDは明細entityのみで管理(SRP)
+  - 業務コードとサロゲートキーの分離原則を採用: id(BIGINT)はDB自動採番、po_number(VARCHAR)は業務コード(PO-{yyyyMMdd}-{連番3桁})。現職での飛び番運用への違和感を原則として言語化
+  - 監査カラムを3層構造で設計: created_at/by(レコード作成) + updated_at/by(レコード更新) + received_at/by(状態遷移)。W15で確立した監査ログ原則を明細レベルで完全実装
+  - stock_movementsにpo_line_id(NULL許可FK, ON DELETE RESTRICT)を追加し、入荷伝票と発注明細を紐付け。打ち消し伝票方式(設計判断6)と整合
+  - H2/MySQL方言差への対応: AFTER構文をH2非対応のため削除、ON UPDATE CURRENT_TIMESTAMP回避でupdated_atはアプリ層更新方針、TINYINT→SMALLINTで範囲安全性確保
+  - 多層防御の徹底: DECIMAL(p,s) + CHECK > 0制約 + Java側@Digits+@Positiveの3層、UNIQUE(po_id, line_no)で同一PO内の行番号重複をDB側でも防止
+  - dev/prod両環境でFlyway V5/V6/V7マイグレーション成功確認
+
+### 63. W16 Step 2修正 + Step 3前半: DB環境IaC化・enum/例外実装
+
+- **日付**: 2026/05/13
+- **ファイル**:
+  - [V5__create_purchase_orders_table.sql](src/main/resources/db/migration/V5__create_purchase_orders_table.sql)
+  - [V6__create_purchase_order_lines_table.sql](src/main/resources/db/migration/V6__create_purchase_order_lines_table.sql)
+  - [docker-compose.yml](docker-compose.yml)
+  - [run-prod.ps1](run-prod.ps1)
+  - [PoStatus.java](src/main/java/com/example/todo_api_v2/entity/PoStatus.java)
+  - [PoLineStatus.java](src/main/java/com/example/todo_api_v2/entity/PoLineStatus.java)
+  - [PurchaseOrderNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/PurchaseOrderNotFoundException.java)
+  - [PurchaseOrderLineNotFoundException.java](src/main/java/com/example/todo_api_v2/exception/PurchaseOrderLineNotFoundException.java)
+- **学習内容**:
+  - V6修正: received_atをTIMESTAMP→DATE型に変更(納品日はBusiness Time扱いに統一、設計判断60との整合性確保)
+  - V5修正: updated_byカラム追加(ヘッダもrefreshStatusで更新されるため監査原則を一貫適用)
+  - MySQL環境をdocker-compose管理に移行(W14の手動docker run運用から脱却、IaC化)
+  - 環境変数を.env/.env.exampleで外部注入、Spring Boot側はDB_URL/DB_USERNAME/DB_PASSWORDで受け取り
+  - PowerShell起動スクリプトrun-prod.ps1作成(.env読み込み+bootRun起動を自動化)
+  - W14手動コンテナとの名前衝突を経験(docker rmで旧コンテナ削除、IaC移行時の典型的事故)
+  - W16 Step 3 設計: PoStatusとPoLineStatusに分離(状態遷移ロジックは明細にしか必要ないためSRPで分離、将来PARTIAL_RECEIVEDに備えた拡張性も確保)
+  - canTransitionTo()はswitch式で各遷移を明示するパターン2を採用、戻り値はプリミティブboolean
+  - PurchaseOrder/PurchaseOrderLineの状態遷移メソッド設計: markAsReceived/cancelReceivingの引数にoperator/updatedAtを明示的に渡す方針(Service層が時刻決定権を持つ、テスタビリティ確保)
+  - ドメイン例外2つ作成: 既存ItemNotFoundExceptionと同パターン(NoSuchElementException継承、メッセージ文字列を受け取るコンストラクタ)
+  - 入荷取消時のreceived_*クリアは設計判断83(打ち消し伝票方式)と矛盾しない(履歴はstock_movementsのOUTBOUND伝票で残るため監査追跡可能)
+
+### 64. W16 Step 3 後半: 発注 Entity 実装（PurchaseOrder / PurchaseOrderLine）
+
+- **日付**: 2026/05/15
+- **ファイル**:
+  - [EmptyPurchaseOrderLineException.java](src/main/java/com/example/todo_api_v2/exception/EmptyPurchaseOrderLineException.java)
+  - [PurchaseOrder.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrder.java)
+  - [PurchaseOrderLine.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrderLine.java)
+- **学習内容**:
+  - 発注ヘッダ・明細の Entity を実装。状態遷移ロジックを Entity に集約し、`@Setter` 禁止 + final フィールドでイミュータブル設計を強化
+  - ガード節パターン（チェックを先頭、更新は後）で Entity の中途半端な状態を構造的に防ぐ設計を採用
+  - `@Transactional` は DB レコードのロールバック専用、Java オブジェクトには効かないという誤解の解消
+
+### 65. W16 Step4準備：DTO設計確定とリファクタ・環境整備
+
+- **日付**: 2026/05/20
+- **ファイル**: [V8__add_order_date_to_purchase_orders.sql](src/main/resources/db/migration/V8__add_order_date_to_purchase_orders.sql) / [PurchaseOrder.java](src/main/java/com/example/todo_api_v2/entity/PurchaseOrder.java)
+- **学習内容**:
+  - W16 Step4-A：発注・入荷関連の5つのDTO（record方式）のフィールド・Validation方針を確定
+  - DTOディレクトリをドメインごとにサブパッケージ分割（common/item/stock/todo/purchaseorder）
+  - V8マイグレーションでpurchase_ordersにorder_dateカラムを追加（dev/prod両環境で適用確認）
+  - PurchaseOrder Entityにorder_dateフィールドとクラスJavadocを追加
+  - リクエストDTOはマスアサインメント対策で「クライアントが決める情報のみ」に絞る設計を採用
+  - `@Digits(integer, fraction)`とSQLの`DECIMAL(p, s)`の桁数対応を整理（integer = p - s）
+  - SpotBugsテストコード警告18件を解消（テキストブロック誤検知はexclude設定、未使用変数は削除）
+  - Step1リファクタの取りこぼし（import文未コミット）を発見し後追い修正、`git status`でのclean確認を習慣化
+
+### 66. W16 Step4：発注・入荷DTOの実装とEntityテスト
+
+- **日付**: 2026/05/21
+- **ファイル**: [dto/purchaseorder/](src/main/java/com/example/todo_api_v2/dto/purchaseorder/) / [PurchaseOrderLineTest.java](src/test/java/com/example/todo_api_v2/entity/PurchaseOrderLineTest.java) / [PurchaseOrderTest.java](src/test/java/com/example/todo_api_v2/entity/PurchaseOrderTest.java)
+- **学習内容**:
+  - 発注・入荷関連の5つのDTO（record方式）を実装。リクエストはBean Validation、レスポンスはValidationなし
+  - Listを持つrecordにコンパクトコンストラクタ＋List.copyOfで防御的コピーを実装（浅い不変の対策）
+  - SpotBugsのEI_EXPOSE_REP/REP2を理解し、誤検知（返却側）はexclude.xmlに明示列挙で対処
+  - PurchaseOrderLineTest（5ケース）：markAsReceived/cancelReceivingの状態遷移と例外時の状態不変を検証
+  - PurchaseOrderTest（6ケース）：refreshStatusの全分岐（null/空/状態変化あり・なし）を網羅
+  - Entityメソッドのnullチェックは「発生源と責務」で判断する多層防御の線引きを学習
+
+### 67. W16 Step 5-A：Mapperインターフェース設計（PurchaseOrder系）
+
+- **日付**: 2026/05/22
+- **ファイル**: コード変更なし（設計判断のみ。実装は明日 feature/w16-purchase-order で着手）
+- **学習内容**:
+  - PurchaseOrder系Mapperを `PurchaseOrderMapper`（ヘッダ＝集約ルート）と `PurchaseOrderLineMapper`（明細）の2つに分割する設計を確定。根拠は「ヘッダ単独・明細単独で動かす操作が現実に存在する＝操作の粒度が分かれる」こと
+  - 「依存」には参照の依存（Item↔StockMovement：片方向・対等な別実体）と構成の依存（PurchaseOrder↔PurchaseOrderLine：両方向・部品＝集約）の2種類があると整理
+  - 両Mapperのメソッド一覧（計8個）を確定。明細UPDATEの命名を `updatePoLineStatus` → `updateReceipt` / `updateReceiptCancellation` に修正（`update`の後ろは名詞、というルールを確立）
+  - INSERTは「1メソッド＝1SQL＝1テーブル」「po_idはヘッダINSERT後にしか確定しない」ため2メソッドに分割。順番制御はService層の責務
+  - `useGeneratedKeys` の挙動（呼び出し側インスタンスのidフィールドがリフレクションで書き換わる）を整理
+  - `PurchaseOrder` Entityの `id` に `final` が付いている設計ミスを発見。採番フィールドは不変ではないため `final` を外し、`@AllArgsConstructor` をコンストラクタ2本（新規作成用／DB復元用）に置き換える方針を確定
+
+### 68. W16 Step 5-A：Entity修正・Mapperインターフェース設計
+
+- **日付**: 2026/05/23
+- **ファイル**: PurchaseOrder.java / PurchaseOrderLine.java / PurchaseOrderMapper.java / PurchaseOrderLineMapper.java / application.yml
+- **学習内容**:
+  - Entity の `id` / `createdAt` から `final` を外し、「DBが決めるフィールド」という第3グループとして整理。`final` は「生成後ずっと不変」の約束なので、INSERT後に値が確定するフィールドに付けると宣言が嘘になる
+  - `@AllArgsConstructor` を廃止し、新規作成用 `private` コンストラクタ＋DB復元用 `public` コンストラクタの2本に。新規作成は static ファクトリメソッド `createNew()` を唯一の入口とし、コンストラクタを `private` に隠して裏口を塞いだ
+  - `PurchaseOrder` Entity は `lines`（明細リスト）フィールドを持たない判断。ヘッダの責務は「明細の所有」でなく「明細を受け取って状態を計算すること」。フィールドに持つと真実の源が二重化する
+  - `PurchaseOrderMapper` / `PurchaseOrderLineMapper` インターフェース計8メソッドを作成。`application.yml` に `mybatis.mapper-locations` を追加
+
+### 69. W16 Step 5-B：Mapper XML実装
+
+- **日付**: 2026/05/23
+- **ファイル**: PurchaseOrderMapper.xml / PurchaseOrderLineMapper.xml
+- **学習内容**:
+  - `PurchaseOrderMapper.xml`（insert / findAll / findById / updatePoStatus）と `PurchaseOrderLineMapper.xml`（insertLines / findByPoId / updateReceipt / updateReceiptCancellation）の計8メソッドのSQLを実装
+  - `<resultMap><constructor>` 方式で、`@Setter` を持たない不変EntityのDB復元用コンストラクタを呼ぶマッピングを実装（判断93の新標準）。`<idArg>`＋`<arg>` をコンストラクタ引数順に並べ、`javaType` は引数の型と完全一致させる
+  - `<foreach>` で明細の bulk INSERT を実装。`collection="list"`、`item="line"`、`separator=","` で `( ... ), ( ... )` を生成
+  - `updateReceipt` / `updateReceiptCancellation` は SQL が同一でも「偶然の重複」と判断し、2メソッドのまま分割を維持
+  - ハマり：空の Mapper XML ファイルを `mapper/` に置くと `SAXParseException` で起動失敗。XMLは中身を書き終えてからフォルダに置く
+
+### 70. W16 Step 5-C：Mapper統合テスト（MapperTest）
+
+- **日付**: 2026/05/24
+- **ファイル**: PurchaseOrderMapperTest.java / PurchaseOrderLineMapperTest.java
+- **学習内容**:
+  - `PurchaseOrderMapperTest`（5メソッド）と `PurchaseOrderLineMapperTest`（7メソッド）を作成し、Mapper 8メソッドがH2で正しく動くことを統合テストで実証。`<resultMap><constructor>`・`useGeneratedKeys`・`<foreach>` のbulk INSERTが、起動成功では保証されなかったレベルで裏付けられた
+  - テスト方式は `@SpringBootTest` + `@Transactional`。既存 `StockMovementMapperTest` の型に揃え、Strangler Fig の精神で新規テストも既存作法に合わせた
+  - Mapperテストは「書き込み」と「読み出し」がペアで初めて検証が閉じる。`insertLines` の検証に `findByPoId` を道具として使う ──「2メソッドが絡む」のは設計ミスでなくMapperテストの正しい姿。テストメソッドは「主役（本命で検証したいメソッド）」で分ける
+  - 検証していないフィールドはミスがあっても見つからない。`assertPoLine` から `dueDate` が抜けても緑のまま素通りする。INSERTした全14フィールドを照合対象にし、`hasSize` で件数を固定して「余計なものが混ざっていない」を保証する
+  - `BigDecimal` の比較は `isEqualByComparingTo`。`equals()` はスケール差（`10` と `10.000`）で不一致になるため、DBから読み戻した値の照合では `compareTo` ベースの比較を使う
+  - 期待値は「INSERTした本人オブジェクト」を使い、リテラルのハードコード重複を排除。検証は順序非依存に（`stream().filter` で id 一致要素を探す）
+  - ハマり：`findAll` テストで `List` のインデックスを `get(1)/(2)/(3)` と1ずれで書いていた（0始まりなので `get(0)/(1)/(2)`）
+
+### 71. W16 Step 6（前半）：発注作成のService層を実装
+
+- **日付**: 2026/05/27
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 発注作成 `create` を実装。DTO→Entity変換、ヘッダINSERT、UK重複の例外詰め替え、`useGeneratedKeys` でのpoId取得、lineNo採番、明細bulkInsert、レスポンス組み立ての一連を完成
+  - UK重複は事前SELECTせず、INSERT時の `DuplicateKeyException` を捕捉して業務例外 `DuplicatePoNumberException` に詰め替える方針を採用（事前SELECTはレースコンディションに弱い）
+  - 例外詰め替え時は元例外を cause として繋ぐ（`super(message, cause)`）。スタックトレースを切らさない
+  - DB自動採番のcreatedAt/updatedAtはINSERT後にJava側Entityへ書き戻らないため、INSERT後に再SELECTしてレスポンスに正しい値を載せる方式に修正
+  - `assembleResponse` をMapper非依存の純粋な変換ヘルパーに切り出し、SELECT・存在チェックは呼び出し側の責務に分離
+  - ヘッダ不在時の例外型を文脈で分離（`create`=`IllegalStateException` / 詳細取得=`PurchaseOrderNotFoundException`）
+
+### 72. W16 Step 6（後半）：発注詳細取得をService層に実装
+
+- **日付**: 2026/05/29
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 詳細取得 `findById(Long id)` を実装。`findById` でヘッダ取得→`orElseThrow(PurchaseOrderNotFoundException)`、`findByPoId` で明細取得、`assembleResponse` で組み立て
+  - 読み取り操作は整合性検証をせず、DBの状態をありのまま返す設計を確認。明細0件チェックは書き込み側（create=`@NotEmpty`、入荷処理=`EmptyPurchaseOrderLineException`）の責務であり、読み取り側ではチェックしない
+  - `create` の後半と詳細取得は `orElseThrow` の例外型だけが違う（500 vs 404）。共通部分は `assembleResponse` のみ共有し、メソッドは別に保つ
+  - 未使用の例外クラス `PurchaseOrderLineNotFoundException`（デッドコード）を `Select-String` で確認のうえ削除（`refactor:` で単独コミット）
+
+### 73. W16 Step 6（後半）：発注一覧取得の実装とServiceテスト着手
+
+- **日付**: 2026/06/01
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 一覧取得 `findAll()` を実装。ヘッダ全件取得 → 各ヘッダに `findByPoId` で明細をぶら下げ `assembleResponse` で変換、Streamで記述
+  - N+1問題（ヘッダN件に対し明細SELECTがN回）を認識した上で、YAGNIに基づき今は許容。コメントで意図を明記（実データでスロークエリが出たらIN句/JOINで最適化）
+  - `PurchaseOrderServiceTest` を作成。判断36（Entityは本物、Mapperはモック＝Sociable Unit Test）に沿い、2つのMapperを `@Mock`、`PurchaseOrderService` を `@InjectMocks`
+  - findById 正常系テストを実装。全フィールドを検証（Mapperが返したEntityの値がResponseに正しく移し替わるか）。`hasSize` で件数、BigDecimalは `isEqualByComparingTo`
+
+### 74. W16 Step 6：発注管理ServiceのユニットテストをArgumentCaptorで完成
+
+- **日付**: 2026/06/02,03
+- **ファイル**: [PurchaseOrderServiceTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/service/PurchaseOrderServiceTest.java)
+- **学習内容**:
+  - Serviceテスト6本を完成（findById 正常/異常、create 正常/lineNo採番/UK重複、findAll 複数件/0件）
+  - ArgumentCaptor で insert/insertLines に渡された Entity を捕まえ、create固有ロジック（lineNo採番・DTO→Entity変換・createdBy）を検証。再SELECT方式では「入力検証」と「出力検証」を分離する必要があると理解
+  - doAnswer + ReflectionTestUtils で void メソッド insert の id 書き戻し（useGeneratedKeys の副作用）を再現
+  - 検証の相手を間違えると無意味なテストになる（capturedLines は request と突き合わせる、再SELECT結果ではない）
+  - テストのヘルパー化（setupCreateMapper / assertCapturedLines）で準備と検証を分離
+
+### 75. W16 Step 7: 入荷処理 receive の Service 実装
+
+- **日付**: 2026/06/04
+- **ファイル**: [PurchaseOrderService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/service/PurchaseOrderService.java)
+- **学習内容**:
+  - 入荷処理を「明細1件ずつ」方式で実装（`POST /api/purchase-orders/{poId}/lines/{lineNo}/receive`、ボディは receivedAt のみ）。一括にすると納品日が潰れ分納を表現できないため。
+  - 例外設計を整理：二重 receive=`InvalidStatusTransitionException`（409・既存再利用）、lineNo 不在=`PurchaseOrderLineNotFoundException`（404・NoSuchElement 継承で新規）、poId 不在=`PurchaseOrderNotFoundException`（404・既存）。
+  - 明細探索は `lines.get(lineNo-1)`（index 依存・欠番で破綻）を避け、`stream().filter(l -> l.getLineNo().equals(lineNo))` で値一致に修正。
+  - `refreshStatus` 後の `updatePoStatus(po)` 呼び出し漏れを修正（メモリ上のヘッダ status 変更を DB に反映）。
+
+### 76. W16: DuplicatePoNumberException のハンドラ追加（500→409 修正）
+
+- **日付**: 2026/06/04
+- **ファイル**: [GlobalExceptionHandler.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/exception/GlobalExceptionHandler.java)
+- **学習内容**:
+  - 専用ハンドラが無く `Exception.class` の汎用ハンドラに拾われて 500 化していたバグを、専用ハンドラ追加で 409 に修正。
+  - `@ExceptionHandler` の型マッチは「自分自身に最も近いハンドラ」を優先する。継承元が 500 系でも専用ハンドラがあれば意図したステータスで返る（`DuplicateItemCodeException` が IllegalState 継承でも 409 で返る理由）。
+  - ハンドラのマッチングは記述順ではなく型の近さで決まる（Security のフィルタ順とは別物）。
+
+### 77. 発注管理APIのController実装とテスト方針決定
+
+- **日付**: 2026/06/08
+- **ファイル**: [PurchaseOrderController.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/main/java/com/example/todo_api_v2/controller/PurchaseOrderController.java)
+- **学習内容**:
+  - `PurchaseOrderController` を実装（create=201 / findById・findAll=200 / receive=200、base-pathは既存規約に揃えて `/api` なし）
+  - 入荷の `receive` を当初 `@GetMapping` にしていたバグを修正。GETはボディを持たない前提のため、状態更新は `@PostMapping` が正しい
+  - ControllerTestはフルコンテキスト（`@SpringBootTest`）方式に決定。`@WebMvcTest`＋`@MockBean` だと例外→ステータス（404/409）とSecurityをモックで潰して検証できないため
+
+### 78. 発注管理APIのControllerTest（create / get）を実装
+
+- **日付**: 2026/06/10
+- **ファイル**: [PurchaseOrderControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/controller/PurchaseOrderControllerTest.java)
+- **学習内容**:
+  - ControllerTestをフルコンテキスト（`@SpringBootTest`＋`webAppContextSetup`＋`springSecurity()`）で実装。createの正常系・バリデーション・409重複、getById・一覧・404・認証401まで14本が全緑
+  - 認証必須エンドポイントのテストには `@WithMockUser(roles = "USER")` が必須。正常系の201テストで付け忘れて401で落ちるバグを修正（401はController到達前にSecurityで弾かれる）
+  - バリデーション異常系（#2〜#9）は入口で弾かれDBに到達しないためitem作成は不要、重複（#10）は1回目POSTが実INSERTされFK制約を踏むためitem作成が必要、という「エラーがどの層で起きるか」でテストデータ要否を判断
+
+### 79. W16完了：発注管理APIのControllerTest（receive系）とREADME整備
+
+- **日付**: 2026/06/11
+- **ファイル**: [PurchaseOrderControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w16-purchase-order/src/test/java/com/example/todo_api_v2/controller/PurchaseOrderControllerTest.java), [README.md](README.md)
+- **学習内容**:
+  - receive系6本を実装しControllerTest全20本が緑（部分入荷でヘッダORDERED維持／完了入荷でヘッダRECEIVED／二重入荷409／receivedAt null 400／poId不在404／lineNo不在404）
+  - `@Validated @RequestBody` のバリデーションはService到達前に効くため、receivedAt null の400テストは発注を作らずパス変数だけ与えても検証できる（バリデーションが存在チェックより先に効く順序）
+  - Jackson 3（`tools.jackson`）では `writeValueAsString` がチェック例外を投げないため、JSON生成のみのヘルパーから `throws Exception` を外せる（Jackson 2との差異）
+  - W16のDoD完了。READMEにエンドポイント一覧（品目／在庫／発注）・ER図（6テーブル）・409エラー仕様を追記
+
 ---
-Last Updated: 2026/05/08
+Last Updated: 2026/06/11
