@@ -1,8 +1,8 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.ItemCreateRequest;
-import com.example.todo_api_v2.dto.ItemResponse;
-import com.example.todo_api_v2.dto.StockResponse;
+import com.example.todo_api_v2.dto.item.ItemCreateRequest;
+import com.example.todo_api_v2.dto.item.ItemResponse;
+import com.example.todo_api_v2.dto.stock.StockResponse;
 import com.example.todo_api_v2.entity.Category;
 import com.example.todo_api_v2.entity.Item;
 import com.example.todo_api_v2.entity.UomType;

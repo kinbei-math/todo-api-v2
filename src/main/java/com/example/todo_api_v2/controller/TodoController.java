@@ -1,6 +1,6 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.*;
+import com.example.todo_api_v2.dto.todo.*;
 import com.example.todo_api_v2.service.TodoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ public class TodoController {
     @PutMapping("/{id}")//idに対してTodoを更新する
     //例外NoSuchElementExceptionを投げだすときはHandlerで操作。try-catchは必要ない。
     //ResponseEntityの中の型も分かりやすくなる。例外処理のときは別々のResponseを返す必要があったので、?にしていた。
-    public ResponseEntity<TodoResponse> updateTodo(@Validated @RequestBody TodoUpdateRequest todoUpdateRequest,@PathVariable Long id){
+    public ResponseEntity<TodoResponse> updateTodo(@Validated @RequestBody TodoUpdateRequest todoUpdateRequest, @PathVariable Long id){
         return ResponseEntity.status(HttpStatus.OK).body(todoService.updateTodo(todoUpdateRequest,id));
     }
 
@@ -59,7 +59,7 @@ public class TodoController {
     //patch　部分変更
     //RequestBodyの部分にはStatus(JSON)を受け取るDTO
     //nullを許容していないので、@Validatedをつけている
-    public ResponseEntity<TodoResponse> changeTodoStatus(@Validated @RequestBody TodoStatusUpdateRequest todoStatusUpdateRequest,@PathVariable Long id){
+    public ResponseEntity<TodoResponse> changeTodoStatus(@Validated @RequestBody TodoStatusUpdateRequest todoStatusUpdateRequest, @PathVariable Long id){
         return ResponseEntity.status(HttpStatus.OK).body(todoService.changeTodoStatus(todoStatusUpdateRequest,id));
     }
 

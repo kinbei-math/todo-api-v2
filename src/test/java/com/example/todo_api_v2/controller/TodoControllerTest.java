@@ -1,6 +1,6 @@
 package com.example.todo_api_v2.controller;
 
-import com.example.todo_api_v2.dto.TodoResponse;
+import com.example.todo_api_v2.dto.todo.TodoResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -175,9 +175,9 @@ public class TodoControllerTest {
     @Test
     @WithMockUser(roles="USER")
     void testFindAll_shouldReturnTodoList_whenCalled() throws Exception{
-        //test用にDBに2件登録
-        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
-        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
+        // test用にDBに2件を事前登録(戻り値は捨てる)
+        createTodoForTest("test1","2027-04-01");
+        createTodoForTest("test2","2027-04-02");
 
         //get/todosの場合、全件取得でListで返す。
         mockMvc.perform(MockMvcRequestBuilders.get("/todos"))
@@ -194,11 +194,11 @@ public class TodoControllerTest {
     @Test
     @WithMockUser(roles="USER")
     void testFindByKeyword_shouldReturn200AndTodoResponse_whenKeywordExists() throws Exception{
-        //test用にDBに4件登録
-        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
-        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
-        TodoResponse test3 = createTodoForTest("test1-1","2027-05-01");
-        TodoResponse test4 = createTodoForTest("test2-2","2027-05-02");
+        //test用にDBに事前に4件登録(戻り値は捨てる)
+        createTodoForTest("test1","2027-04-01");
+        createTodoForTest("test2","2027-04-02");
+        createTodoForTest("test1-1","2027-05-01");
+        createTodoForTest("test2-2","2027-05-02");
 
         //get/todos?keywordで検索してListを返す。
         mockMvc.perform(MockMvcRequestBuilders.get("/todos?keyword=test1"))
@@ -213,9 +213,9 @@ public class TodoControllerTest {
     @Test
     @WithMockUser(roles="USER")
     void testFindByKeyword_shouldReturn200AndEmptyList_whenKeywordNotExists() throws Exception{
-        //test用にDBに2件登録
-        TodoResponse test1 = createTodoForTest("test1","2027-04-01");
-        TodoResponse test2 = createTodoForTest("test2","2027-04-02");
+        //test用にDBに事前に2件登録(戻り値は捨てる)
+        createTodoForTest("test1","2027-04-01");
+        createTodoForTest("test2","2027-04-02");
 
         //get/todos?keywordでEmptyListが返ること確かめる
         mockMvc.perform(MockMvcRequestBuilders.get("/todos?keyword=todo"))

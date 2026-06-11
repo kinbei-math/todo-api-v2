@@ -1,6 +1,6 @@
 package com.example.todo_api_v2.service;
 
-import com.example.todo_api_v2.dto.*;
+import com.example.todo_api_v2.dto.todo.*;
 import com.example.todo_api_v2.entity.Todo;
 import com.example.todo_api_v2.mapper.TodoMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 
-import java.lang.annotation.Target;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -69,7 +68,7 @@ public class TodoService {
     //保管庫にあるデータを探して置き換える
     //保管庫にないデータの場合は例外を投げる
     @Transactional
-    public TodoResponse updateTodo(TodoUpdateRequest todoUpdateRequest,Long id){
+    public TodoResponse updateTodo(TodoUpdateRequest todoUpdateRequest, Long id){
         Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todo.setTitle(todoUpdateRequest.title());
         todo.setDueDate(todoUpdateRequest.dueDate());
@@ -84,7 +83,7 @@ public class TodoService {
     //保管庫にあるデータのstatusを変化させる
     //保管庫にない場合は例外を投げる
     @Transactional
-    public TodoResponse changeTodoStatus(TodoStatusUpdateRequest todoStatusUpdateRequest,Long id){
+    public TodoResponse changeTodoStatus(TodoStatusUpdateRequest todoStatusUpdateRequest, Long id){
         Todo todo= todoMapper.findById(id).orElseThrow(()->new NoSuchElementException("Todoが見つかりません。"));
         todo.changeStatus(todoStatusUpdateRequest.nextStatus());
 
