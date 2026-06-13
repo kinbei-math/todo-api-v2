@@ -2,10 +2,7 @@ package com.example.todo_api_v2.dto.item;
 
 import com.example.todo_api_v2.entity.Category;
 import com.example.todo_api_v2.entity.UomType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public record ItemCreateRequest(
         @NotBlank(message = "品目コードを入力してください")
@@ -19,6 +16,12 @@ public record ItemCreateRequest(
 
         @NotNull(message = "単位を選択してください")
         UomType uom,
+
+        @PositiveOrZero(message = "0以上を入力してください")
+        Integer safetyStock,
+
+        @PositiveOrZero(message = "0以上を入力してください")
+        Integer reorderPoint,
 
         @NotNull(message = "カテゴリを選択してください")
         Category category
