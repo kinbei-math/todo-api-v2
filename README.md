@@ -953,5 +953,13 @@ erDiagram
   - Jackson 3（`tools.jackson`）では `writeValueAsString` がチェック例外を投げないため、JSON生成のみのヘルパーから `throws Exception` を外せる（Jackson 2との差異）
   - W16のDoD完了。READMEにエンドポイント一覧（品目／在庫／発注）・ER図（6テーブル）・409エラー仕様を追記
 
+### 80. W17 Step1-4: 安全在庫・発注点フィールド追加（V9マイグレーション〜ItemMapper修正）
+
+- **日付**: 2026/06/13
+- **ファイル**: V9マイグレーション / Item / ItemCreateRequest / ItemResponse / ReorderAlertResponse / ItemMapper
+- **学習内容**:
+  - V9マイグレーションで `items` に `safety_stock`・`reorder_point` を追加（INTEGER / NOT NULL / DEFAULT 0）。Item・登録/取得DTO・ItemMapper を新カラム対応に揃え、欠品/発注推奨レスポンス `ReorderAlertResponse` を新規作成
+  - Bean Validation（`@PositiveOrZero`）は `@Valid` の入口（リクエストDTO）でのみ発火し、MyBatis が組み立てる Entity には効かないため、検証は DTO 側に置く
+  - 欠品アラートの判定基準は安全在庫ではなく発注点（リードタイム消費を見込んだ発注の引き金）。`currentStock` は元データ `stock_movements.qty`（BigDecimal）に型を合わせる
 ---
-Last Updated: 2026/06/11
+Last Updated: 2026/06/13
