@@ -13,6 +13,8 @@ public class Item {
     private String name;             // 品名 100字以内 columnと相違があるので注意
     private UomType uom;             // 単位(enum)
     private Category category;       // 分類(enum)
+    private Integer safetyStock;     // 安全在庫(0以上、DEFAULT0)
+    private Integer reorderPoint;    // 発注点(0以上、DEFAULT0)
     private LocalDateTime createdAt; // 作成日時
     private LocalDateTime updatedAt; // 更新日時(初期値はcreatedAtと同じ)
 
