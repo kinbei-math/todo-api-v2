@@ -21,6 +21,8 @@ public interface ItemMapper {
                 item_code,
                 item_name AS name,
                 uom,
+                safety_stock,
+                reorder_point,
                 category,
                 created_at,
                 updated_at
@@ -37,6 +39,8 @@ public interface ItemMapper {
                 item_code,
                 item_name AS name,
                 uom,
+                safety_stock,
+                reorder_point,
                 category,
                 created_at,
                 updated_at
@@ -48,8 +52,8 @@ public interface ItemMapper {
     // 3. 新規登録
     @Insert("""
             INSERT INTO
-                items(item_code, item_name, uom, category)
-                VALUES(#{itemCode}, #{name}, #{uom}, #{category})
+                items(item_code, item_name, uom, safety_stock, reorder_point, category)
+                VALUES(#{itemCode}, #{name}, #{uom}, #{safetyStock}, #{reorderPoint}, #{category})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Item item);
@@ -61,6 +65,8 @@ public interface ItemMapper {
                 item_code,
                 item_name AS name,
                 uom,
+                safety_stock,
+                reorder_point,
                 category,
                 created_at,
                 updated_at
