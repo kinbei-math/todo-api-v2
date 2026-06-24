@@ -961,5 +961,14 @@ erDiagram
   - V9マイグレーションで `items` に `safety_stock`・`reorder_point` を追加（INTEGER / NOT NULL / DEFAULT 0）。Item・登録/取得DTO・ItemMapper を新カラム対応に揃え、欠品/発注推奨レスポンス `ReorderAlertResponse` を新規作成
   - Bean Validation（`@PositiveOrZero`）は `@Valid` の入口（リクエストDTO）でのみ発火し、MyBatis が組み立てる Entity には効かないため、検証は DTO 側に置く
   - 欠品アラートの判定基準は安全在庫ではなく発注点（リードタイム消費を見込んだ発注の引き金）。`currentStock` は元データ `stock_movements.qty`（BigDecimal）に型を合わせる
+
+### 81. W17 Step4.5-6: 既存テスト修正・発注推奨SQL（サブクエリ＋LEFT JOIN）
+
+- **日付**: 2026/06/24
+- **ファイル**: ItemService / ItemCreateRequest / ItemMapper / ItemMapperTest / StockMovementMapperTest / PurchaseOrderLineMapperTest / PurchaseOrderControllerTest / ItemServiceTest
+- **学習内容**:
+  - Item に安全在庫・発注点を追加した波及で壊れた既存テストを修正（125 tests green）。修正場所を「どの層をテストしているか」で切り分け、Controller経由系は本体 `ItemService.createItem` のセット漏れ、Mapper直叩き系はテストデータ（`createTestItem`）を直した
+  - 発注推奨SQL（`reorderItems`）を `ItemMapper` に実装。`stock_movements` を item_id ごとに符号付きSUMで集計したサブクエリを `items` に LEFT JOIN し、現在庫が発注点以下の品目を返す。サブクエリ＝集計結果を仮想テーブル化して結合する二段構え
+  - COALESCE は集計サブクエリ内ではなく LEFT JOIN 後の本体クエリ側に置く（GROUP BY は在庫履歴ゼロの品目を行として出さない）。返り値用に SELECT、NULL行の除外防止用に WHERE の両方に必要。CI は SpotBugs の `BX_UNBOXING_IMMEDIATELY_REBOXED` を `Integer.valueOf(0)` で解消した
 ---
-Last Updated: 2026/06/13
+Last Updated: 2026/06/24
