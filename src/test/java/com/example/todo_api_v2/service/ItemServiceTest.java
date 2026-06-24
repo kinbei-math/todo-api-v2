@@ -94,7 +94,7 @@ public class ItemServiceTest {
     void testCreateItem_shouldReturnItemResponse_whenItemCodeNotExists(){
         // 準備
         ItemCreateRequest itemCreateRequest = new ItemCreateRequest(
-                "TEST-0001","test",UomType.PC,Category.RAW_MATERIAL
+                "TEST-0001","test",UomType.PC,null, null, Category.RAW_MATERIAL
         );
 
         // Mapperの挙動
@@ -117,7 +117,7 @@ public class ItemServiceTest {
     void testCreateItem_shouldThrowDuplicateItemCodeException_whenItemCodeExists(){
         // 準備
         ItemCreateRequest itemCreateRequest = new ItemCreateRequest(
-                "TEST-0001","test",UomType.PC,Category.RAW_MATERIAL
+                "TEST-0001","test",UomType.PC,null, null, Category.RAW_MATERIAL
         );
 
         // Mapperの挙動
