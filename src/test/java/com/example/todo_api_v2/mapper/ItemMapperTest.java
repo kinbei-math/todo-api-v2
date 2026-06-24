@@ -127,6 +127,8 @@ public class ItemMapperTest {
         item.setItemCode(itemCode);
         item.setName(name);
         item.setUom(UomType.PC);
+        item.setSafetyStock(0);
+        item.setReorderPoint(0);
         item.setCategory(Category.RAW_MATERIAL);
         return item;
     }
