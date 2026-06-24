@@ -1,6 +1,7 @@
 package com.example.todo_api_v2.mapper;
 
 
+import com.example.todo_api_v2.dto.item.ReorderAlertResponse;
 import com.example.todo_api_v2.entity.Item;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
@@ -79,4 +80,24 @@ public interface ItemMapper {
     // 5. ItemIdが存在するかの確認
     @Select("SELECT EXISTS (SELECT 1 FROM items WHERE id = #{id})")
     boolean existsById(Long id);
+
+    // 6. 発注点を切ったものを返す
+    @Select("""
+            SELECT
+                items.id,
+                items.item_code,
+                items.item_name AS name,
+                items.uom,
+                COALESCE(sm.current_stock, 0) AS current_stock,
+                items.reorder_point
+            FROM items
+            LEFT JOIN (
+                SELECT
+                    item_id, SUM(CASE WHEN movement_type = 'INBOUND' THEN qty ELSE -qty END) AS current_stock
+                    FROM stock_movements
+                    GROUP BY item_id
+            ) AS sm ON items.id = sm.item_id
+            WHERE COALESCE(sm.current_stock, 0) <= items.reorder_point
+            """)
+    List<ReorderAlertResponse> reorderItems();
 }
