@@ -56,6 +56,8 @@ public class ItemService {
         item.setItemCode(request.itemCode());
         item.setName(request.name());
         item.setUom(request.uom());
+        item.setSafetyStock(request.safetyStock());
+        item.setReorderPoint(request.reorderPoint());
         item.setCategory(request.category());
 
         // Insert実行(SQL)
@@ -92,6 +94,8 @@ public class ItemService {
                 item.getItemCode(),
                 item.getName(),
                 item.getUom(),
+                item.getSafetyStock(),
+                item.getReorderPoint(),
                 item.getCategory(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()

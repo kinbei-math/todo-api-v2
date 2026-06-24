@@ -26,4 +26,8 @@ public record ItemCreateRequest(
         @NotNull(message = "カテゴリを選択してください")
         Category category
 ) {
+        public ItemCreateRequest{
+                safetyStock = (safetyStock == null) ? 0 : safetyStock;
+                reorderPoint = (reorderPoint == null) ? 0 : reorderPoint;
+        }
 }
