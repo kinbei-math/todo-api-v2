@@ -27,7 +27,7 @@ public record ItemCreateRequest(
         Category category
 ) {
         public ItemCreateRequest{
-                safetyStock = (safetyStock == null) ? 0 : safetyStock;
-                reorderPoint = (reorderPoint == null) ? 0 : reorderPoint;
+                safetyStock = (safetyStock == null) ? Integer.valueOf(0) : safetyStock;
+                reorderPoint = (reorderPoint == null) ? Integer.valueOf(0) : reorderPoint;
         }
 }
