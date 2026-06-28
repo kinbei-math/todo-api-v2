@@ -1,14 +1,15 @@
 package com.example.todo_api_v2.mapper;
 
-import com.example.todo_api_v2.entity.Category;
-import com.example.todo_api_v2.entity.Item;
-import com.example.todo_api_v2.entity.UomType;
+import com.example.todo_api_v2.dto.item.ReorderAlertResponse;
+import com.example.todo_api_v2.entity.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class ItemMapperTest {
     @Autowired
     private ItemMapper itemMapper;
+    @Autowired
+    private StockMovementMapper stockMovementMapper;
 
     @Test
     @DisplayName("insertが正しく行われ、自動採番されたIDが取得可能")
@@ -121,7 +124,64 @@ public class ItemMapperTest {
         assertThat(exists).isFalse();
     }
 
-    // テスト用のヘルプメソッド
+    @Test
+    @DisplayName("reorderItemsで在庫が発注点と等しい品目は発注対象に含まれる")
+    void reorderItems_shouldReturnItem_whenStockEqualsReorderPoint() {
+        // item・stockMovementの準備
+        Item testItem = createTestItem("TEST-0001", "testItem");
+        testItem.setReorderPoint(10);
+        itemMapper.insert(testItem);
+        StockMovement testStockMovement = createTestMovement(testItem.getId(), MovementType.INBOUND, new BigDecimal("10.000"));
+        stockMovementMapper.insert(testStockMovement);
+
+        // 実行
+        List<ReorderAlertResponse> reorderAlertResponseList = itemMapper.reorderItems();
+
+        // 検証
+        assertThat(reorderAlertResponseList)
+                .extracting(ReorderAlertResponse::id)
+                .contains(testItem.getId());
+    }
+
+    @Test
+    @DisplayName("reorderItemsで在庫が発注点を超える品目は発注対象に含まれない")
+    void reorderItems_shouldNotReturnItem_whenStockExceedsReorderPoint() {
+        // item・stockMovementの準備
+        Item testItem = createTestItem("TEST-0001", "testItem");
+        testItem.setReorderPoint(10);
+        itemMapper.insert(testItem);
+        StockMovement testStockMovement1 = createTestMovement(testItem.getId(), MovementType.INBOUND, new BigDecimal("20.000"));
+        StockMovement testStockMovement2 = createTestMovement(testItem.getId(), MovementType.OUTBOUND, new BigDecimal("9.000"));
+        stockMovementMapper.insert(testStockMovement1);
+        stockMovementMapper.insert(testStockMovement2);
+
+        // 実行
+        List<ReorderAlertResponse> reorderAlertResponseList = itemMapper.reorderItems();
+
+        // 検証
+        assertThat(reorderAlertResponseList)
+                .extracting(ReorderAlertResponse::id)
+                .doesNotContain(testItem.getId());
+    }
+
+    @Test
+    @DisplayName("reorderItemsで在庫履歴がない品目（現在庫0）も発注対象に含まれる")
+    void reorderItems_shouldReturnItem_whenNoStockMovementExists(){
+        // itemの準備
+        Item testItem = createTestItem("TEST-0001", "testItem");
+        testItem.setReorderPoint(10);
+        itemMapper.insert(testItem);
+
+        // 実行
+        List<ReorderAlertResponse> reorderAlertResponseList = itemMapper.reorderItems();
+
+        // 検証
+        assertThat(reorderAlertResponseList)
+                .extracting(ReorderAlertResponse::id)
+                .contains(testItem.getId());
+    }
+
+    // item作成のヘルプメソッド
     private Item createTestItem(String itemCode,String name){
         Item item = new Item();
         item.setItemCode(itemCode);
@@ -131,5 +191,16 @@ public class ItemMapperTest {
         item.setReorderPoint(0);
         item.setCategory(Category.RAW_MATERIAL);
         return item;
+    }
+
+    // stockMovement作成のヘルプメソッド
+    private StockMovement createTestMovement(Long itemId, MovementType type, BigDecimal qty){
+        StockMovement stockMovement = new StockMovement();
+        stockMovement.setItemId(itemId);
+        stockMovement.setMovementType(type);
+        stockMovement.setQty(qty);
+        stockMovement.setMovementDate(LocalDate.parse("2026-01-01"));
+        stockMovement.setCreatedBy("USER");
+        return stockMovement;
     }
 }
