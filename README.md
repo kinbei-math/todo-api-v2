@@ -970,5 +970,14 @@ erDiagram
   - Item に安全在庫・発注点を追加した波及で壊れた既存テストを修正（125 tests green）。修正場所を「どの層をテストしているか」で切り分け、Controller経由系は本体 `ItemService.createItem` のセット漏れ、Mapper直叩き系はテストデータ（`createTestItem`）を直した
   - 発注推奨SQL（`reorderItems`）を `ItemMapper` に実装。`stock_movements` を item_id ごとに符号付きSUMで集計したサブクエリを `items` に LEFT JOIN し、現在庫が発注点以下の品目を返す。サブクエリ＝集計結果を仮想テーブル化して結合する二段構え
   - COALESCE は集計サブクエリ内ではなく LEFT JOIN 後の本体クエリ側に置く（GROUP BY は在庫履歴ゼロの品目を行として出さない）。返り値用に SELECT、NULL行の除外防止用に WHERE の両方に必要。CI は SpotBugs の `BX_UNBOXING_IMMEDIATELY_REBOXED` を `Integer.valueOf(0)` で解消した
+
+### 82. W17 発注推奨のMapperTest・Service層実装
+
+- **日付**: 2026/06/28
+- **ファイル**: [ItemMapperTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java), [ItemService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/main/java/com/example/todo_api_v2/service/ItemService.java)
+- **学習内容**:
+  - reorderItems のMapperTestを境界値で3本作成（在庫=発注点で含む／超過で除外／在庫履歴ゼロで含む）。命名は英語BDD（method_shouldResult_whenCondition）＋日本語@DisplayName、Assertは検証意図に必要なidのみに絞る
+  - ItemService に reorderItems を薄い委譲メソッドとして追加。薄くても層を通すことでControllerのmapper直接依存を避け、業務ルールの追加先を確保
+  - 参照系メソッドは @Transactional を付けない方針で統一し、getCurrentStock から除去（読み取りは原子性不要・過去判断とも非衝突）
 ---
-Last Updated: 2026/06/24
+Last Updated: 2026/06/28
