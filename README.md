@@ -979,5 +979,14 @@ erDiagram
   - reorderItems のMapperTestを境界値で3本作成（在庫=発注点で含む／超過で除外／在庫履歴ゼロで含む）。命名は英語BDD（method_shouldResult_whenCondition）＋日本語@DisplayName、Assertは検証意図に必要なidのみに絞る
   - ItemService に reorderItems を薄い委譲メソッドとして追加。薄くても層を通すことでControllerのmapper直接依存を避け、業務ルールの追加先を確保
   - 参照系メソッドは @Transactional を付けない方針で統一し、getCurrentStock から除去（読み取りは原子性不要・過去判断とも非衝突）
+
+### 83. W17 発注推奨のテスト3層（Service・Controller）
+
+- **日付**: 2026/07/08
+- **ファイル**: [ItemServiceTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/service/ItemServiceTest.java), [ItemController.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/main/java/com/example/todo_api_v2/controller/ItemController.java), [ItemControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/controller/ItemControllerTest.java)
+- **学習内容**:
+  - Service層の委譲テスト：薄い委譲メソッドは中身を再検証せず、`isSameAs` で「mapperの戻り値を素通ししたか」だけを検証する（MapperTestとの二重検証を避ける）
+  - Controllerに発注推奨エンドポイント `GET /items/reorder-alerts` を追加（名詞形パス・特定IDに紐づかない絞り込み一覧）
+  - Controllerテストを結合（@SpringBootTest）で3本：発注点を下回った品目だけ返る正常系、認証エラー401、該当なしの空配列（0件は404でなく200＋[]）。入力のないGETに400/404は不要という異常系の見極め
 ---
-Last Updated: 2026/06/28
+Last Updated: 2026/07/08
