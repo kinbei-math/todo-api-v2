@@ -2,6 +2,7 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.item.ItemCreateRequest;
 import com.example.todo_api_v2.dto.item.ItemResponse;
+import com.example.todo_api_v2.dto.item.ReorderAlertResponse;
 import com.example.todo_api_v2.dto.stock.StockResponse;
 import com.example.todo_api_v2.entity.Item;
 import com.example.todo_api_v2.exception.DuplicateItemCodeException;
@@ -56,6 +57,8 @@ public class ItemService {
         item.setItemCode(request.itemCode());
         item.setName(request.name());
         item.setUom(request.uom());
+        item.setSafetyStock(request.safetyStock());
+        item.setReorderPoint(request.reorderPoint());
         item.setCategory(request.category());
 
         // Insert実行(SQL)
@@ -70,7 +73,6 @@ public class ItemService {
     }
 
     // 4. 現在庫を返す
-    @Transactional
     public StockResponse getCurrentStock(Long itemId){
         // Itemの取得(itemIdに対しての存在確認)
         Item item = itemMapper.findById(itemId)
@@ -84,6 +86,10 @@ public class ItemService {
         return convertStockResponse(item, currentStock);
     }
 
+    // 5. 発注点を切ったものを返す
+    public List<ReorderAlertResponse> reorderItems() {
+        return itemMapper.reorderItems();
+    }
 
     // Responseに移し替えるメソッド 2種
     private ItemResponse convertItemResponse(Item item){
@@ -92,6 +98,8 @@ public class ItemService {
                 item.getItemCode(),
                 item.getName(),
                 item.getUom(),
+                item.getSafetyStock(),
+                item.getReorderPoint(),
                 item.getCategory(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()

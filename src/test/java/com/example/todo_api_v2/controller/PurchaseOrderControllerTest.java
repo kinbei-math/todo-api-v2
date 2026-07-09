@@ -540,7 +540,8 @@ public class PurchaseOrderControllerTest {
      * @throws Exception MockMvc実行時のチェック例外
      */
     private ItemResponse createItemForTest(String itemCode, String name) throws Exception {
-        ItemCreateRequest itemCreateRequest = new ItemCreateRequest(itemCode,name, UomType.PC, Category.RAW_MATERIAL);
+        ItemCreateRequest itemCreateRequest = new ItemCreateRequest(itemCode,name, UomType.PC,
+                null, null, Category.RAW_MATERIAL);
         String json = objectMapper.writeValueAsString(itemCreateRequest);
 
         String responseJson = mockMvc.perform(MockMvcRequestBuilders.post("/items")

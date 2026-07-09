@@ -2,6 +2,7 @@ package com.example.todo_api_v2.controller;
 
 import com.example.todo_api_v2.dto.item.ItemCreateRequest;
 import com.example.todo_api_v2.dto.item.ItemResponse;
+import com.example.todo_api_v2.dto.item.ReorderAlertResponse;
 import com.example.todo_api_v2.dto.stock.StockResponse;
 import com.example.todo_api_v2.service.ItemService;
 import org.springframework.http.HttpStatus;
@@ -44,5 +45,11 @@ public class ItemController {
     @GetMapping("/{id}/stock")
     public ResponseEntity<StockResponse> getCurrentStock(@PathVariable Long id){
         return ResponseEntity.status(HttpStatus.OK).body(itemService.getCurrentStock(id));
+    }
+
+    // 5. GET reorderAlerts
+    @GetMapping("/reorder-alerts")
+    public ResponseEntity<List<ReorderAlertResponse>> getReorderAlerts() {
+        return ResponseEntity.status(HttpStatus.OK).body(itemService.reorderItems());
     }
 }

@@ -2,6 +2,7 @@ package com.example.todo_api_v2.service;
 
 import com.example.todo_api_v2.dto.item.ItemCreateRequest;
 import com.example.todo_api_v2.dto.item.ItemResponse;
+import com.example.todo_api_v2.dto.item.ReorderAlertResponse;
 import com.example.todo_api_v2.dto.stock.StockResponse;
 import com.example.todo_api_v2.entity.Category;
 import com.example.todo_api_v2.entity.Item;
@@ -94,7 +95,7 @@ public class ItemServiceTest {
     void testCreateItem_shouldReturnItemResponse_whenItemCodeNotExists(){
         // 準備
         ItemCreateRequest itemCreateRequest = new ItemCreateRequest(
-                "TEST-0001","test",UomType.PC,Category.RAW_MATERIAL
+                "TEST-0001","test",UomType.PC,null, null, Category.RAW_MATERIAL
         );
 
         // Mapperの挙動
@@ -117,7 +118,7 @@ public class ItemServiceTest {
     void testCreateItem_shouldThrowDuplicateItemCodeException_whenItemCodeExists(){
         // 準備
         ItemCreateRequest itemCreateRequest = new ItemCreateRequest(
-                "TEST-0001","test",UomType.PC,Category.RAW_MATERIAL
+                "TEST-0001","test",UomType.PC,null, null, Category.RAW_MATERIAL
         );
 
         // Mapperの挙動
@@ -169,6 +170,23 @@ public class ItemServiceTest {
         verify(itemMapper,times(1)).findById(999L);
         verify(stockMovementMapper,never()).sumByItemId(999L);
         assertThat(exception.getMessage()).isEqualTo("品目が見つかりません。id=999");
+    }
+
+    @Test
+    @DisplayName("reorderItemsでitemMapperのreorderItemsを呼び、結果をそのまま返す")
+    void reorderItems_shouldDelegateToMapper() {
+        // 準備
+        List<ReorderAlertResponse> mapperResult = List.of(
+                new ReorderAlertResponse(1L, "TEST-0001", "test", UomType.PC, new BigDecimal("10.000"), 20)
+        );
+        when(itemMapper.reorderItems()).thenReturn(mapperResult);
+
+        // 実行
+        List<ReorderAlertResponse> testList = itemService.reorderItems();
+
+        // 検証
+        verify(itemMapper, times(1)).reorderItems();
+        assertThat(testList).isSameAs(mapperResult); // 渡したリストのインスタンスと同じインスタンスが返る。serviceで加工していない。
     }
 
     // Optional<Item>を作成するヘルパーメソッド

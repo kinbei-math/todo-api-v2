@@ -35,6 +35,7 @@ gradlew.bat bootRun
 | POST | `/items` | 品目を新規登録する |
 | GET | `/items/{id}` | 品目を1件取得する |
 | GET | `/items/{id}/stock` | 品目の現在庫を照会する（入出庫履歴のSUMで算出） |
+| GET | `/items/reorder-alerts` | 在庫が発注点以下になった品目の一覧を取得する（発注推奨） |
 | POST | `/stock-movements` | 在庫変動（入庫 INBOUND / 出庫 OUTBOUND）を登録する |
 | POST | `/purchase-orders` | 発注を新規作成する（ヘッダ＋明細を一括登録） |
 | GET | `/purchase-orders` | 発注の一覧を取得する（各発注に明細を含む） |
@@ -102,8 +103,8 @@ graph LR
 
 ## データベース設計(ER図)
 
-本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V8）。
-W16時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
+本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V9）。
+W17時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
 
 ```mermaid
 erDiagram
@@ -133,6 +134,8 @@ erDiagram
         VARCHAR(100) item_name "品名"
         VARCHAR(10) uom "単位:SET,PC,KG,G,METER"
         VARCHAR(50) category "区分:RAW_MATERIAL等5種"
+        INTEGER safety_stock "安全在庫(NOT NULL DEFAULT 0)"
+        INTEGER reorder_point "発注点(NOT NULL DEFAULT 0)"
         TIMESTAMP created_at "作成日時(System Time)"
         TIMESTAMP updated_at "更新日時(System Time)"
     }
@@ -953,5 +956,40 @@ erDiagram
   - Jackson 3（`tools.jackson`）では `writeValueAsString` がチェック例外を投げないため、JSON生成のみのヘルパーから `throws Exception` を外せる（Jackson 2との差異）
   - W16のDoD完了。READMEにエンドポイント一覧（品目／在庫／発注）・ER図（6テーブル）・409エラー仕様を追記
 
+### 80. W17 Step1-4: 安全在庫・発注点フィールド追加（V9マイグレーション〜ItemMapper修正）
+
+- **日付**: 2026/06/13
+- **ファイル**: V9マイグレーション / Item / ItemCreateRequest / ItemResponse / ReorderAlertResponse / ItemMapper
+- **学習内容**:
+  - V9マイグレーションで `items` に `safety_stock`・`reorder_point` を追加（INTEGER / NOT NULL / DEFAULT 0）。Item・登録/取得DTO・ItemMapper を新カラム対応に揃え、欠品/発注推奨レスポンス `ReorderAlertResponse` を新規作成
+  - Bean Validation（`@PositiveOrZero`）は `@Valid` の入口（リクエストDTO）でのみ発火し、MyBatis が組み立てる Entity には効かないため、検証は DTO 側に置く
+  - 欠品アラートの判定基準は安全在庫ではなく発注点（リードタイム消費を見込んだ発注の引き金）。`currentStock` は元データ `stock_movements.qty`（BigDecimal）に型を合わせる
+
+### 81. W17 Step4.5-6: 既存テスト修正・発注推奨SQL（サブクエリ＋LEFT JOIN）
+
+- **日付**: 2026/06/24
+- **ファイル**: ItemService / ItemCreateRequest / ItemMapper / ItemMapperTest / StockMovementMapperTest / PurchaseOrderLineMapperTest / PurchaseOrderControllerTest / ItemServiceTest
+- **学習内容**:
+  - Item に安全在庫・発注点を追加した波及で壊れた既存テストを修正（125 tests green）。修正場所を「どの層をテストしているか」で切り分け、Controller経由系は本体 `ItemService.createItem` のセット漏れ、Mapper直叩き系はテストデータ（`createTestItem`）を直した
+  - 発注推奨SQL（`reorderItems`）を `ItemMapper` に実装。`stock_movements` を item_id ごとに符号付きSUMで集計したサブクエリを `items` に LEFT JOIN し、現在庫が発注点以下の品目を返す。サブクエリ＝集計結果を仮想テーブル化して結合する二段構え
+  - COALESCE は集計サブクエリ内ではなく LEFT JOIN 後の本体クエリ側に置く（GROUP BY は在庫履歴ゼロの品目を行として出さない）。返り値用に SELECT、NULL行の除外防止用に WHERE の両方に必要。CI は SpotBugs の `BX_UNBOXING_IMMEDIATELY_REBOXED` を `Integer.valueOf(0)` で解消した
+
+### 82. W17 発注推奨のMapperTest・Service層実装
+
+- **日付**: 2026/06/28
+- **ファイル**: [ItemMapperTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/mapper/ItemMapperTest.java), [ItemService.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/main/java/com/example/todo_api_v2/service/ItemService.java)
+- **学習内容**:
+  - reorderItems のMapperTestを境界値で3本作成（在庫=発注点で含む／超過で除外／在庫履歴ゼロで含む）。命名は英語BDD（method_shouldResult_whenCondition）＋日本語@DisplayName、Assertは検証意図に必要なidのみに絞る
+  - ItemService に reorderItems を薄い委譲メソッドとして追加。薄くても層を通すことでControllerのmapper直接依存を避け、業務ルールの追加先を確保
+  - 参照系メソッドは @Transactional を付けない方針で統一し、getCurrentStock から除去（読み取りは原子性不要・過去判断とも非衝突）
+
+### 83. W17 発注推奨のテスト3層（Service・Controller）
+
+- **日付**: 2026/07/08
+- **ファイル**: [ItemServiceTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/service/ItemServiceTest.java), [ItemController.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/main/java/com/example/todo_api_v2/controller/ItemController.java), [ItemControllerTest.java](https://github.com/kinbei-math/todo-api-v2/blob/feature/w17-safety-stock/src/test/java/com/example/todo_api_v2/controller/ItemControllerTest.java)
+- **学習内容**:
+  - Service層の委譲テスト：薄い委譲メソッドは中身を再検証せず、`isSameAs` で「mapperの戻り値を素通ししたか」だけを検証する（MapperTestとの二重検証を避ける）
+  - Controllerに発注推奨エンドポイント `GET /items/reorder-alerts` を追加（名詞形パス・特定IDに紐づかない絞り込み一覧）
+  - Controllerテストを結合（@SpringBootTest）で3本：発注点を下回った品目だけ返る正常系、認証エラー401、該当なしの空配列（0件は404でなく200＋[]）。入力のないGETに400/404は不要という異常系の見極め
 ---
-Last Updated: 2026/06/11
+Last Updated: 2026/07/09

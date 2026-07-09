@@ -7,6 +7,6 @@ import java.time.LocalDateTime;
 
 // すべての情報を載せて返す
 public record ItemResponse(
-        Long id, String itemCode, String name, UomType uom, Category category,
-        LocalDateTime createdAt, LocalDateTime updatedAt
+        Long id, String itemCode, String name, UomType uom, Integer safetyStock, Integer reorderPoint,
+        Category category, LocalDateTime createdAt, LocalDateTime updatedAt
 ) {}
