@@ -35,6 +35,7 @@ gradlew.bat bootRun
 | POST | `/items` | 品目を新規登録する |
 | GET | `/items/{id}` | 品目を1件取得する |
 | GET | `/items/{id}/stock` | 品目の現在庫を照会する（入出庫履歴のSUMで算出） |
+| GET | `/items/reorder-alerts` | 在庫が発注点以下になった品目の一覧を取得する（発注推奨） |
 | POST | `/stock-movements` | 在庫変動（入庫 INBOUND / 出庫 OUTBOUND）を登録する |
 | POST | `/purchase-orders` | 発注を新規作成する（ヘッダ＋明細を一括登録） |
 | GET | `/purchase-orders` | 発注の一覧を取得する（各発注に明細を含む） |
@@ -102,8 +103,8 @@ graph LR
 
 ## データベース設計(ER図)
 
-本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V8）。
-W16時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
+本アプリケーションのデータベース構造は以下の通りです。Flywayを導入し、マイグレーションを自動化しています（V1〜V9）。
+W17時点。`todos` と `users` は現状リレーションを張っておらず、今後 `todos` に `user_id` を追加してFKで繋げる予定です。
 
 ```mermaid
 erDiagram
@@ -133,6 +134,8 @@ erDiagram
         VARCHAR(100) item_name "品名"
         VARCHAR(10) uom "単位:SET,PC,KG,G,METER"
         VARCHAR(50) category "区分:RAW_MATERIAL等5種"
+        INTEGER safety_stock "安全在庫(NOT NULL DEFAULT 0)"
+        INTEGER reorder_point "発注点(NOT NULL DEFAULT 0)"
         TIMESTAMP created_at "作成日時(System Time)"
         TIMESTAMP updated_at "更新日時(System Time)"
     }
@@ -989,4 +992,4 @@ erDiagram
   - Controllerに発注推奨エンドポイント `GET /items/reorder-alerts` を追加（名詞形パス・特定IDに紐づかない絞り込み一覧）
   - Controllerテストを結合（@SpringBootTest）で3本：発注点を下回った品目だけ返る正常系、認証エラー401、該当なしの空配列（0件は404でなく200＋[]）。入力のないGETに400/404は不要という異常系の見極め
 ---
-Last Updated: 2026/07/08
+Last Updated: 2026/07/09
